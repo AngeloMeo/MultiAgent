@@ -1,0 +1,10 @@
+memory:
+    keep name as quote;
+end_memory
+
+task entrypoint [] -> whole:
+    show "What is your name?";
+    grab name;
+    show "Hello, ";
+    show name;
+done

@@ -1,0 +1,49 @@
+memory:
+    keep counter as whole;
+    keep f_val as fract;
+    keep is_done as flag;
+    keep msg as quote;
+end_memory
+
+task entrypoint [] -> whole:
+    % 1. Fract Math & Logic
+    f_val << 3.14;
+    check f_val over 3.0 then
+        show "Fract logic OK";
+    close;
+
+    % 2. Logic Operators
+    is_done << no;
+    check not is_done and (1 is 1) then
+        show "Logic operators OK";
+    close;
+
+    % 3. Loops
+    counter << 0;
+    loop counter under 3 do
+        show counter;
+        counter << counter plus 1;
+    close;
+
+    % 4. Task Call with Return
+    counter << my_sum run [10, 20];
+    show "Sum result (30):";
+    show counter;
+
+    % 5. Recursion (Factorial)
+    counter << factorial run [5];
+    show "Factorial 5! (120):";
+    show counter;
+done
+
+task my_sum [a as whole, b as whole] -> whole:
+    yield a plus b;
+done
+
+task factorial [n as whole] -> whole:
+    check n is 0 then
+        yield 1;
+    alt
+        yield n times (factorial run [n minus 1]);
+    close;
+done
