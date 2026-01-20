@@ -1,0 +1,101 @@
+memory:
+    keep choice as whole;
+    keep num1 as fract;
+    keep num2 as fract;
+    keep result as fract;
+    keep error_flag as flag; % Flag per indicare un errore
+end_memory
+
+% Task per l'addizione
+task add [a as fract, b as fract] -> fract:
+    result << a plus b;
+    yield result;
+done
+
+% Task per la sottrazione
+task subtract [a as fract, b as fract] -> fract:
+    result << a minus b;
+    yield result;
+done
+
+% Task per la moltiplicazione
+task multiply [a as fract, b as fract] -> fract:
+    result << a times b;
+    yield result;
+done
+
+% Task per la divisione
+task divide [a as fract, b as fract] -> fract:
+    error_flag << no; % Resetta il flag di errore
+    check b is 0 then
+        show "Errore: Divisione per zero!";
+        error_flag << yes; % Imposta il flag di errore
+        yield 0.0; % Restituisce un valore di default
+    close;
+    check error_flag is no then % Esegui solo se non c'è stato errore
+        result << a div b;
+        yield result;
+    close;
+done
+
+% Task principale (entrypoint)
+task entrypoint [] -> fract:
+    show "Calcolatrice avviata. Inserisci i dati quando richiesto.";
+    loop yes do
+        % Mostra il menu
+        show "------ Calcolatrice Menu ------    ";
+        show "1. Addizione                 ";
+        show "2. Sottrazione               ";
+        show "3. Moltiplicazione           ";
+        show "4. Divisione                 ";
+        show "5. Esci                      ";
+        show "-----------------------------    ";
+        show "Inserisci la tua scelta:";
+        grab choice;
+
+        % Gestione delle scelte del menu
+        check choice is 1 then
+            show "Inserisci il primo numero:";
+            grab num1;
+            show "Inserisci il secondo numero:";
+            grab num2;
+            result << add run [num1, num2];
+            show "Risultato:";
+            show result;
+        alt_check choice is 2 then
+            show "Inserisci il primo numero:";
+            grab num1;
+            show "Inserisci il secondo numero:";
+            grab num2;
+            result << subtract run [num1, num2];
+            show "Risultato:";
+            show result;
+        alt_check choice is 3 then
+            show "Inserisci il primo numero:";
+            grab num1;
+            show "Inserisci il secondo numero:";
+            grab num2;
+            result << multiply run [num1, num2];
+            show "Risultato:";
+            show result;
+        alt_check choice is 4 then
+            show "Inserisci il primo numero:";
+            grab num1;
+            show "Inserisci il secondo numero:";
+            grab num2;
+            result << divide run [num1, num2];
+            % Controlla se la divisione ha prodotto un errore (flag error_flag)
+            check error_flag is no then
+               show "Risultato:";
+               show result;
+            close;
+        alt_check choice is 5 then
+            show "Arrivederci!";
+            loop no do % Esci dal loop principale
+            close;
+        alt
+            show "Scelta non valida. Riprova.";
+        close; % Chiude l'intero blocco check/alt_check/alt
+    close; % Fine del loop principale
+    yield 0.0; % Valore di ritorno di default per entrypoint
+done

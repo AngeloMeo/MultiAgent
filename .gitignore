@@ -1,1 +1,8 @@
 /.venv
+.env
+ILP_Proj.md
+ILP_Proj.pdf
+SPIEGAZIONE_PROGETTO.md
+WORKFLOW_DETTAGLIATO.md
+multiagent/__pycache__
+toy-agent/__pycache__

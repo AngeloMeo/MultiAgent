@@ -337,7 +337,8 @@ class ToyParser:
 # ==========================================
 
 class ToyExecutor:
-    def __init__(self, script: Optional[str] = None):
+    def __init__(self, script: Optional[str] = None, testing_mode: bool = False):
+        self.testing_mode = testing_mode
         self.global_memory: Dict[str, Any] = {}
         self.symbol_table_types: Dict[str, TypeName] = {}
         self.tasks: Dict[str, TaskNode] = {}
@@ -430,11 +431,15 @@ class ToyExecutor:
 
         elif isinstance(stat, ShowNode):
              val = self.evaluate_expr(stat.expr, scope)
-             print(f"OUTPUT: {val}")
+             if self.testing_mode:
+                 print(f"{val}")
+             else:
+                 print(f"OUTPUT: {val}")
 
         elif isinstance(stat, GrabNode):
              # Mock input
-             val_str = input(f"INPUT ({stat.target}): ")
+             prompt = f"INPUT ({stat.target}): " if not self.testing_mode else ""
+             val_str = input(prompt)
              # Need to convert based on target type
              # Check declaration
              if stat.target in scope:
@@ -486,7 +491,10 @@ class ToyExecutor:
             if expr.op == 'plus': return l + r
             if expr.op == 'minus': return l - r
             if expr.op == 'times': return l * r
-            if expr.op == 'div': return l / r
+            if expr.op == 'div': 
+                if isinstance(l, int) and isinstance(r, int):
+                    return l // r
+                return l / r
             if expr.op == 'is': return l == r
             if expr.op == 'is_not': return l != r
             if expr.op == 'over': return l > r
