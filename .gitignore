@@ -4,7 +4,4 @@ ILP_Proj.md
 ILP_Proj.pdf
 SPIEGAZIONE_PROGETTO.md
 WORKFLOW_DETTAGLIATO.md
-multiagent/__pycache__
-multiagent/agents/__pycache__
-multiagent/graph/__pycache__
-toy-agent/__pycache__
+__pycache__
