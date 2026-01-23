@@ -53,6 +53,13 @@ def after_executor(state: AgentState) -> str:
         "refiner" se ci sono fallimenti e tentativi disponibili
         "failure" se superato limite tentativi
     """
+    # Guard: se non ci sono test, considera come fallimento
+    if not state["test_results"]:
+        print("[EXECUTOR] WARNING: Nessun test case eseguito!")
+        if state["test_retry_count"] >= MAX_TEST_RETRIES:
+            return "failure"
+        return "refiner"
+    
     # Controlla se tutti i test sono passati (tr è un oggetto TestResult Pydantic)
     all_passed = all(tr.passed for tr in state["test_results"])
     

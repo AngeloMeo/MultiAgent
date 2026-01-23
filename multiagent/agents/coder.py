@@ -20,6 +20,9 @@ from ..models import CoderOutput
 
 CODER_SYSTEM_PROMPT = """Sei un esperto programmatore nel linguaggio Toy-Agent.
 
+REGOLA GENERALE:
+- NON USARE MAI IL CARATTERE "ի".
+
 REGOLE CRITICHE - LEGGI ATTENTAMENTE:
 
 1. STRUTTURA OBBLIGATORIA:

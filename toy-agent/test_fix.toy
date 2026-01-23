@@ -19,33 +19,34 @@ task multiply [a as fract, b as fract] -> fract:
 done
 
 task divide [a as fract, b as fract] -> fract:
-    check b is 0.0 then
-        show "Errore: Divisione per zero";
-        yield 0.0; % O un valore di errore appropriato        
+    % Gestione divisione per zero
+    check b is 0 then
+        show "Errore: Divisione per zero!";
+        yield 0;
     close;
     yield a div b;
 done
 
 task show_menu [] -> whole:
-    show "--------------------";
-    show "Menu Calcolatrice:";
-    show "--------------------";
+    show "-------------------- ";
+    show "Menu Calcolatrice";
+    show "-------------------- ";
     show "1. Addizione";
     show "2. Sottrazione";
     show "3. Moltiplicazione";
     show "4. Divisione";
     show "5. Esci";
-    show "--------------------";
+    show "-------------------- ";
     show "Inserisci la tua scelta:";
     grab choice;
-    yield choice;
+    yield 1;
 done
 
 task entrypoint [] -> whole:
     running << yes;
 
     loop running is yes do
-        choice << show_menu run [];
+        show_menu run [];
 
         check choice is 1 then
             show "Inserisci il primo numero:";
@@ -77,19 +78,18 @@ task entrypoint [] -> whole:
             show "Inserisci il secondo numero:";
             grab num2;
             result << divide run [num1, num2];
-            check result is_not 0.0 then
+            check result is_not 0 then
                show "Risultato:";
                show result;
             close;
         alt_check choice is 5 then
-            show "Uscita dalla calcolatrice.";
-            running << no; % Imposta la flag per uscire dal loop
+            show "Arrivederci!";
+            running << no;
         alt
             show "Scelta non valida. Riprova.";
         close;
 
-        % Il loop continuerà solo se 'running' è ancora 'yes'.
-        % Se la scelta è 5, 'running' diventa 'no' e il loop terminerà dopo questo ciclo.
     close;
+
     yield 0;
 done

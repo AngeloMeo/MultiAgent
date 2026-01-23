@@ -6,8 +6,7 @@
 # Per aggiungere campi: modificare AgentState e aggiornare i nodi.
 # ===========================================================================
 
-from typing import TypedDict, Optional, Annotated
-from operator import add
+from typing import TypedDict, Optional
 
 from ..models import ErrorReport, TestCase, TestResult
 

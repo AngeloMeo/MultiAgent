@@ -1,10 +1,10 @@
 import sys
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 
-from lark import Lark, Tree, Token
+from lark import Lark
 from lark.visitors import Interpreter
 
 # ==========================================
@@ -384,31 +384,38 @@ class ToyExecutor:
         if len(args) != len(task.params):
             raise RuntimeError(f"Task {task_name} expects {len(task.params)} args, got {len(args)}")
 
-        # Parameter binding (Pseudo-Global check as per semantics semantics says params are global-like?
-        # Semantics: "I parametri ... sono visibili ovunque ... ma semanticamente ... nel task proprietario"
-        # Since this is a "flat" execution model, we can treat them as locals for the function scope 
-        # or we might need to strictly check collision with globals.
-        # "Collisioni: E' vietato avere due identificatori con lo stesso nome nell'intero file."
-        # This implies params must NOT match global vars.
-        # This check should ideally be in a semantic analysis pass. I'll do a quick check here or assume valid inputs.
-        
+        # Parameter binding with full type checking
         local_scope = {}
+        local_scope_types = {}  # Track parameter types for grab
         for param, val in zip(task.params, args):
-             if param.type_name == TypeName.WHOLE and not isinstance(val, int): raise RuntimeError(f"Type mismatch param {param.name}")
+             # Type check for all types
+             if param.type_name == TypeName.WHOLE and not isinstance(val, int):
+                 raise RuntimeError(f"Type mismatch param {param.name}: expected WHOLE")
+             if param.type_name == TypeName.FRACT and not isinstance(val, (int, float)):
+                 raise RuntimeError(f"Type mismatch param {param.name}: expected FRACT")
+             if param.type_name == TypeName.QUOTE and not isinstance(val, str):
+                 raise RuntimeError(f"Type mismatch param {param.name}: expected QUOTE")
+             if param.type_name == TypeName.FLAG and not isinstance(val, bool):
+                 raise RuntimeError(f"Type mismatch param {param.name}: expected FLAG")
              local_scope[param.name] = val
+             local_scope_types[param.name] = param.type_name
         
-        return self.execute_body(task.body, local_scope)
+        return self.execute_body(task.body, local_scope, local_scope_types, depth)
 
-    def execute_body(self, body: BodyNode, scope: Dict[str, Any]):
+    def execute_body(self, body: BodyNode, scope: Dict[str, Any], scope_types: Dict[str, TypeName] = None, depth: int = 0):
+        if scope_types is None:
+            scope_types = {}
         for stat in body.statements:
-            res = self.execute_stat(stat, scope)
+            res = self.execute_stat(stat, scope, scope_types, depth)
             if res is not None:
                 return res
         return None
 
-    def execute_stat(self, stat: StatNode, scope: Dict[str, Any]):
+    def execute_stat(self, stat: StatNode, scope: Dict[str, Any], scope_types: Dict[str, TypeName] = None, depth: int = 0):
+        if scope_types is None:
+            scope_types = {}
         if isinstance(stat, AssignmentNode):
-            val = self.evaluate_expr(stat.expr, scope)
+            val = self.evaluate_expr(stat.expr, scope, depth)
             # Check if global or local (param)
             if stat.target in scope:
                  # Semantics allow modifying params? usually yes.
@@ -422,15 +429,15 @@ class ToyExecutor:
                  raise RuntimeError(f"Unknown variable assignment: {stat.target}")
 
         elif isinstance(stat, TaskCallStatNode):
-            arg_vals = [self.evaluate_expr(a, scope) for a in stat.args]
-            self.run_task(stat.task_name, arg_vals) # Ignore return
+            arg_vals = [self.evaluate_expr(a, scope, depth) for a in stat.args]
+            self.run_task(stat.task_name, arg_vals, depth + 1)  # Propagate depth
 
         elif isinstance(stat, YieldNode):
-             val = self.evaluate_expr(stat.expr, scope)
+             val = self.evaluate_expr(stat.expr, scope, depth)
              return val
 
         elif isinstance(stat, ShowNode):
-             val = self.evaluate_expr(stat.expr, scope)
+             val = self.evaluate_expr(stat.expr, scope, depth)
              if self.testing_mode:
                  print(f"{val}")
              else:
@@ -443,13 +450,13 @@ class ToyExecutor:
              # Need to convert based on target type
              # Check declaration
              if stat.target in scope:
-                 # Param
-                 pass # Warning?
-                 dest_type = TypeName.QUOTE # Cannot deduce easily without looking up param decl.
-                 # Actually params types are known in task def.
-                 # Simplified: treat all input as string or try parse?
-                 # For Toy Agent, let's assume standard behavior or just store string/int match.
-                 pass
+                 # Parameter - look up type from scope_types
+                 t = scope_types.get(stat.target, TypeName.QUOTE)
+                 if t == TypeName.WHOLE: val = int(val_str)
+                 elif t == TypeName.FRACT: val = float(val_str)
+                 elif t == TypeName.FLAG: val = (val_str.lower() == 'yes')
+                 else: val = val_str
+                 scope[stat.target] = val
              elif stat.target in self.global_memory:
                  t = self.symbol_table_types[stat.target]
                  if t == TypeName.WHOLE: val = int(val_str)
@@ -461,24 +468,24 @@ class ToyExecutor:
                  raise RuntimeError(f"Unknown var {stat.target}")
 
         elif isinstance(stat, CheckNode):
-             cond = self.evaluate_expr(stat.condition, scope)
-             if cond is True:
-                 return self.execute_body(stat.then_body, scope)
+             cond = self.evaluate_expr(stat.condition, scope, depth)
+             if cond:  # Truthy check instead of `is True`
+                 return self.execute_body(stat.then_body, scope, scope_types, depth)
              else:
                  # Elif
                  for elif_b in stat.elif_blocks:
-                      if self.evaluate_expr(elif_b.condition, scope) is True:
-                           return self.execute_body(elif_b.body, scope)
+                      if self.evaluate_expr(elif_b.condition, scope, depth):  # Truthy check
+                           return self.execute_body(elif_b.body, scope, scope_types, depth)
                  # Else
                  if stat.else_body:
-                      return self.execute_body(stat.else_body, scope)
+                      return self.execute_body(stat.else_body, scope, scope_types, depth)
 
         elif isinstance(stat, LoopNode):
-             while self.evaluate_expr(stat.condition, scope) is True:
-                 res = self.execute_body(stat.body, scope)
-                 if res: return res # Handle return inside loop
+             while self.evaluate_expr(stat.condition, scope, depth):  # Truthy check
+                 res = self.execute_body(stat.body, scope, scope_types, depth)
+                 if res: return res  # Handle return inside loop
 
-    def evaluate_expr(self, expr: ExprNode, scope: Dict[str, Any]) -> Any:
+    def evaluate_expr(self, expr: ExprNode, scope: Dict[str, Any], depth: int = 0) -> Any:
         if isinstance(expr, AtomNode):
             return expr.value
         elif isinstance(expr, VarUsageNode):
@@ -486,8 +493,8 @@ class ToyExecutor:
             if expr.name in self.global_memory: return self.global_memory[expr.name]
             raise RuntimeError(f"Undefined variable: {expr.name}")
         elif isinstance(expr, BinaryOpNode):
-            l = self.evaluate_expr(expr.left, scope)
-            r = self.evaluate_expr(expr.right, scope)
+            l = self.evaluate_expr(expr.left, scope, depth)
+            r = self.evaluate_expr(expr.right, scope, depth)
             if expr.op == 'plus': return l + r
             if expr.op == 'minus': return l - r
             if expr.op == 'times': return l * r
@@ -502,11 +509,11 @@ class ToyExecutor:
             if expr.op == 'and': return l and r
             if expr.op == 'or': return l or r
         elif isinstance(expr, UnaryOpNode):
-            v = self.evaluate_expr(expr.expr, scope)
+            v = self.evaluate_expr(expr.expr, scope, depth)
             if expr.op == 'not': return not v
         elif isinstance(expr, TaskCallExprNode):
-            args = [self.evaluate_expr(a, scope) for a in expr.args]
-            return self.run_task(expr.task_name, args)
+            args = [self.evaluate_expr(a, scope, depth) for a in expr.args]
+            return self.run_task(expr.task_name, args, depth + 1)  # Propagate depth
         
         raise RuntimeError(f"Unknown expr: {expr}")
 

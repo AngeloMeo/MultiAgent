@@ -95,6 +95,7 @@ CODICE:
 
 Analizza il codice e genera test cases appropriati.
 Considera quali input sono richiesti (istruzioni "grab") e quali output prodotti (istruzioni "show").
+Analizza bene il codice toy per far aderire perfettamente gli input e gli output attesi con quelli prodotti dal programma.
 IMPORTANTE - TEST PER PROGRAMMI CON MENU/LOOP:
 - Se il programma ha un menu CON LOOP, ogni test case DEVE terminare con l'input per USCIRE dal programma.
 - Esempio: per testare la somma in un menu dove "5" = Esci, gli inputs saranno: ["1", "10", "5", "5"]
@@ -116,14 +117,9 @@ IMPORTANTE - TEST PER PROGRAMMI CON MENU/LOOP:
             result = self.llm_structured.invoke(messages)
             return result
         except Exception as e:
-            # Fallback: crea un test case minimo
-            return TestSuite(test_cases=[
-                TestCase(
-                    description="Test base esecuzione",
-                    inputs=[],
-                    expected_output="OUTPUT: 0"
-                )
-            ])
+            # Fallback: restituisci suite vuota e logga warning
+            print(f"[TESTER] WARNING: Generazione test fallita: {e}")
+            return TestSuite(test_cases=[])
 
 
 # ---------------------------------------------------------------------------

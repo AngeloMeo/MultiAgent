@@ -296,7 +296,7 @@ COSE CHE NON ESISTONO IN TOY-AGENT:
    - ERRATO: `"Hello " plus 5`
    - CORRETTO: `"Hello " plus " World"`
 
-4. VARIABILI LOCALI:
+4. VARIABILI:
    - TUTTE le variabili vanno in memory:
    - I parametri task devono avere nomi globalmente unici
 

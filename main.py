@@ -58,6 +58,11 @@ Esempi:
                     break
                 if not request:
                     continue
+                
+                # Reset coder agent per evitare context confusion
+                from multiagent.graph.nodes import _coder_agent
+                import multiagent.graph.nodes as nodes_module
+                nodes_module._coder_agent = None
                     
                 result = run_graph(request)
                 
@@ -67,6 +72,7 @@ Esempi:
             except Exception as e:
                 print(f"\nErrore: {e}")
                 continue
+            
     
     elif args.request:
         # Singola richiesta da linea di comando
@@ -87,7 +93,7 @@ Esempi:
             "Verifica se un numero N inserito dall'utente è pari (stampa 1) o dispari (stampa 0)",
             "Moltiplicazione tramite somme ripetute: leggi A e B, calcola A * B sommando A per B volte",
             "Calcolatrice: leggi la scelta operazione (1=somma, 2=sottrazione, 3=moltiplicazione, 4=divisione), poi leggi due numeri fract e stampa il risultato. Usa almeno 2 task ausiliari.",
-            "COMPLESSO: Calcolatrice con Menu Interattivo. Richiede: menu scelta, gestione input ibridi, ciclo continuo, almeno 2 funzioni."
+            "COMPLESSO: Calcolatrice con Menu Interattivo. Richiede: menu scelta, gestione input ibridi, ciclo continuo, almeno 2 task, le 4 operazioni implementate."
         ]
         
         print("\nScegli un task demo da eseguire:")

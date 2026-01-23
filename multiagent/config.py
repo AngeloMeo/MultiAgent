@@ -18,13 +18,6 @@ load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-if not GOOGLE_API_KEY:
-    import warnings
-    warnings.warn(
-        "GOOGLE_API_KEY non trovata! "
-        "Crea un file .env con la tua API key. Vedi .env.example"
-    )
-
 
 # ---------------------------------------------------------------------------
 #                           MODEL CONFIGURATION
@@ -45,8 +38,8 @@ REQUEST_DELAY_SEC = 0     # Nessun delay (fatturazione attiva)
 #                           GRAPH SETTINGS
 # ---------------------------------------------------------------------------
 
-MAX_SYNTAX_RETRIES = 10
-MAX_TEST_RETRIES = 5
+MAX_SYNTAX_RETRIES = 3
+MAX_TEST_RETRIES = 1
 
 
 # ---------------------------------------------------------------------------

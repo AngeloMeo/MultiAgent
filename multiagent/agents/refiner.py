@@ -131,51 +131,6 @@ Identifica la causa dell'errore e suggerisci una correzione specifica."""
                 suggestion="Rivedere la logica del programma"
             )
     
-    def analyze_syntax_error(self, toy_code: str, error_message: str) -> ErrorReport:
-        """
-        Analizza un errore di sintassi e produce suggerimenti.
-        
-        Args:
-            toy_code: Codice che ha causato l'errore
-            error_message: Messaggio di errore dal parser
-        
-        Returns:
-            ErrorReport: Report con tipo "Syntax" e suggerimenti.
-        """
-        prompt = f"""Analizza questo errore di sintassi nel codice Toy-Agent.
-
-CODICE:
-```
-{toy_code}
-```
-
-ERRORE PARSER:
-{error_message}
-
-Identifica la posizione esatta dell'errore e suggerisci la correzione."""
-        
-        messages = [
-            SystemMessage(content=REFINER_SYSTEM_PROMPT),
-            HumanMessage(content=prompt)
-        ]
-        
-        try:
-            # Rate limiting
-            print(f"[REFINER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
-            time.sleep(REQUEST_DELAY_SEC)
-            
-            result = self.llm_structured.invoke(messages)
-            # Forza tipo Syntax
-            result.error_type = "Syntax"
-            return result
-        except Exception as e:
-            return ErrorReport(
-                error_type="Syntax",
-                details=error_message,
-                location=None,
-                suggestion="Verificare la sintassi rispetto alla grammatica Toy-Agent"
-            )
-
 
 # ---------------------------------------------------------------------------
 #                           FACTORY FUNCTION

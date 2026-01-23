@@ -6,7 +6,7 @@
 # Per aggiungere campi: modifica le classi BaseModel qui sotto.
 # ===========================================================================
 
-from typing import Optional, Literal, Any
+from typing import Optional, Literal
 from pydantic import BaseModel, Field
 
 

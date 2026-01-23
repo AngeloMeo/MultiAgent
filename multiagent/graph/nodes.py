@@ -9,7 +9,6 @@
 import sys
 import os
 from io import StringIO
-from typing import Any
 
 from ..agents.coder import create_coder_agent
 from ..agents.tester import create_tester_agent
@@ -18,6 +17,20 @@ from ..models import ErrorReport, TestResult
 from ..config import MAX_SYNTAX_RETRIES, MAX_TEST_RETRIES
 
 from .state import AgentState
+
+
+# ---------------------------------------------------------------------------
+#                           HELPER FUNCTIONS
+# ---------------------------------------------------------------------------
+
+def _strict_or_numeric_equal(s1: str, s2: str) -> bool:
+    """Confronta due stringhe, con tolleranza numerica."""
+    if s1 == s2:
+        return True
+    try:
+        return abs(float(s1) - float(s2)) < 1e-9
+    except ValueError:
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +225,10 @@ def executor_node(state: AgentState) -> dict:
             
             print(f"[EXECUTOR] Running: {description}")
             
+            # Salva riferimenti originali (inizializzati prima del try)
+            old_stdin = sys.stdin
+            old_stdout = sys.stdout
+            
             try:
                 # Mock dell'input
                 input_mock = StringIO("\n".join(inputs) + "\n")
@@ -219,9 +236,7 @@ def executor_node(state: AgentState) -> dict:
                 # Cattura output
                 output_capture = StringIO()
                 
-                # Salva e sostituisci stdin/stdout
-                old_stdin = sys.stdin
-                old_stdout = sys.stdout
+                # Sostituisci stdin/stdout
                 sys.stdin = input_mock
                 sys.stdout = output_capture
                 
@@ -260,12 +275,6 @@ def executor_node(state: AgentState) -> dict:
                 actual_lines_list = [l.strip() for l in actual_output.splitlines() if l.strip()]
                 
                 passed = False
-                def strict_or_numeric_equal(s1, s2):
-                    if s1 == s2: return True
-                    try:
-                        return abs(float(s1) - float(s2)) < 1e-9
-                    except ValueError:
-                        return False
 
                 if not expected_lines:
                     passed = not actual_lines_list # Se expected vuoto, actual deve essere vuoto
@@ -275,7 +284,7 @@ def executor_node(state: AgentState) -> dict:
                     for i in range(len(actual_lines_list) - len(expected_lines) + 1):
                         match = True
                         for j in range(len(expected_lines)):
-                            if not strict_or_numeric_equal(actual_lines_list[i + j], expected_lines[j]):
+                            if not _strict_or_numeric_equal(actual_lines_list[i + j], expected_lines[j]):
                                 match = False
                                 break
                         if match:
@@ -303,8 +312,8 @@ def executor_node(state: AgentState) -> dict:
 
             except Exception as e:
                 # Ripristina stdin/stdout in caso di errore
-                sys.stdin = old_stdin if 'old_stdin' in dir() else sys.stdin
-                sys.stdout = old_stdout if 'old_stdout' in dir() else sys.stdout
+                sys.stdin = old_stdin
+                sys.stdout = old_stdout
                 
                 results.append(TestResult(
                     test_description=description,
@@ -402,8 +411,18 @@ def failure_node(state: AgentState) -> dict:
     
     # Gestisci None per error_report
     error_report = state.get('error_report')
-    if error_report and isinstance(error_report, dict):
+    if error_report and isinstance(error_report, ErrorReport):
+        error_details = error_report.details
+    elif isinstance(error_report, dict):
         error_details = error_report.get('details', 'N/A')
+    elif state.get("test_results"):
+        # Se non c'è error_report, svuota il buffer dei tentativi falliti
+        failed_tests = [res for res in state["test_results"] if not res.passed]
+        if failed_tests:
+            ft = failed_tests[0]
+            error_details = f"Test Failed: {ft.test_description}\nMessaggio: {ft.error_message or 'Output mismatch'}\nExpected: {ft.expected_output}\nActual: {ft.actual_output or 'N/A'}"
+        else:
+             error_details = "Test logic failed without specific error message"
     else:
         error_details = state.get('syntax_error') or 'N/A'
     
