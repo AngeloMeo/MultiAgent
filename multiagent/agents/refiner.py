@@ -38,7 +38,9 @@ IMPORTANTE - SINTASSI TOY:
 - NON suggerire operatori inesistenti come `<=`, `>=`, `==`.
 - Operatori validi: plus, minus, times, div, is, is_not, under (<), over (>), and, or, not
 - Loop: NON esiste `for`. Usa sempre `loop condition do`.
-- Per `<=`, suggerisci: `not (x over y)` oppure `x under (y plus 1)`."""
+- Per `<=`:
+  - Su WHOLE: usa `x under (y plus 1)` (es: x <= 5 diventa x under 6)
+  - Su FRACT: usa SOLO `not (x over y)` (NON usare plus 1, non funziona per decimali)"""
 
 
 # ---------------------------------------------------------------------------

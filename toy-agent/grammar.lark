@@ -94,8 +94,8 @@ exprs: expr "," exprs
 task_call_expr: CNAME "run" "[" exprs "]"
 
 atom: CNAME           -> var_usage
-    | INT             -> const_whole
-    | FLOAT           -> const_fract
+    | SIGNED_INT      -> const_whole
+    | SIGNED_FLOAT    -> const_fract
     | ESCAPED_STRING  -> const_quote
     | "yes"           -> const_true
     | "no"            -> const_false
@@ -107,6 +107,10 @@ atom: CNAME           -> var_usage
 %import common.ESCAPED_STRING
 %import common.WS
 %ignore WS
+
+// Numeri con segno (supporto per negativi)
+SIGNED_INT: ["-"] INT
+SIGNED_FLOAT: ["-"] FLOAT
 
 // Commenti stile Toy2 (%)
 COMMENT: "%" /[^\n]*/
