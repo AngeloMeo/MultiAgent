@@ -5,3 +5,5 @@ ILP_Proj.pdf
 SPIEGAZIONE_PROGETTO.md
 WORKFLOW_DETTAGLIATO.md
 __pycache__
+toy-agent
+local_executor.py

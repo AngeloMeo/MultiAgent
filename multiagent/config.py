@@ -39,7 +39,9 @@ REQUEST_DELAY_SEC = 0     # Nessun delay (fatturazione attiva)
 # ---------------------------------------------------------------------------
 
 MAX_SYNTAX_RETRIES = 3
-MAX_TEST_RETRIES = 1
+MAX_TEST_RETRIES = 3
+
+TOY_AGENT_API_URL = os.getenv("TOY_AGENT_API_URL") # E.g. "https://toy-agent-func.azurewebsites.net/api"
 
 
 # ---------------------------------------------------------------------------
