@@ -1,6 +1,0 @@
-memory:
-end_memory
-
-task entrypoint [] -> whole:
-    show 123;
-done
