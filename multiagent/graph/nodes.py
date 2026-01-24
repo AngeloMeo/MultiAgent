@@ -116,9 +116,14 @@ def coder_node(state: AgentState) -> dict:
 def syntax_gate_node(state: AgentState) -> dict:
     """Nodo Syntax Gate: valida il codice con ToyParser."""
     print("[SYNTAX GATE] Validazione sintassi...")
+    
+    remote_attempted = False
+    fallback_to_local = False
 
     if TOY_AGENT_API_URL:
         print(f"[SYNTAX GATE] Validazione REMOTA su {TOY_AGENT_API_URL}...")
+        remote_attempted = True
+        
         try:
             response = requests.post(
                 f"{TOY_AGENT_API_URL}/parse",
@@ -127,57 +132,81 @@ def syntax_gate_node(state: AgentState) -> dict:
             )
             
             if response.status_code == 200:
-                print("[SYNTAX GATE] ✓ Sintassi valida (Remota)!")
-                return {
-                    "syntax_error": None,
-                    "syntax_retry_count": state["syntax_retry_count"]
-                }
+                # Verifica che sia JSON valido (non HTML error page)
+                try:
+                    response.json()  # Test if valid JSON
+                except ValueError:
+                    print("[SYNTAX GATE] ⚠ API risponde con HTML, fallback a locale...")
+                    fallback_to_local = True
+                else:
+                    print("[SYNTAX GATE] ✓ Sintassi valida (Remota)!")
+                    return {
+                        "syntax_error": None,
+                        "syntax_retry_count": state["syntax_retry_count"]
+                    }
+            elif response.status_code >= 500:
+                # Server error (503, 502, etc.) - fallback a locale
+                print(f"[SYNTAX GATE] ⚠ Server error ({response.status_code}), fallback a locale...")
+                fallback_to_local = True
             else:
+                # Errore di sintassi dal server (4xx - errore client/sintassi)
                 try:
                     err_data = response.json()
                     error_msg = err_data.get("error", "Unknown remote syntax error")
                 except (ValueError, KeyError):
-                    error_msg = response.text
-                raise Exception(error_msg)
+                    # Se non è JSON, probabilmente è pagina HTML di errore
+                    if "<html" in response.text.lower():
+                        print("[SYNTAX GATE] ⚠ API risponde con HTML, fallback a locale...")
+                        fallback_to_local = True
+                    else:
+                        error_msg = response.text
+                
+                if not fallback_to_local:
+                    retry_count = state["syntax_retry_count"] + 1
+                    print(f"[SYNTAX GATE] ✗ Errore Sintassi: {error_msg}")
+                    print(f"[SYNTAX GATE] Tentativo {retry_count}/{MAX_SYNTAX_RETRIES}")
+                    return {
+                        "syntax_error": error_msg,
+                        "syntax_retry_count": retry_count
+                    }
 
+        except requests.exceptions.ConnectionError:
+            print("[SYNTAX GATE] ⚠ API non raggiungibile, fallback a locale...")
+            fallback_to_local = True
+        except requests.exceptions.Timeout:
+            print("[SYNTAX GATE] ⚠ Timeout API, fallback a locale...")
+            fallback_to_local = True
         except Exception as e:
-            error_msg = str(e)
+            print(f"[SYNTAX GATE] ⚠ Errore connessione ({e}), fallback a locale...")
+            fallback_to_local = True
+
+    # Esecuzione locale (fallback o primaria)
+    if not remote_attempted or fallback_to_local:
+        if not LOCAL_EXECUTOR_AVAILABLE:
+            error_msg = "API non disponibile e modulo locale non presente"
+            print(f"[SYNTAX GATE] ✗ {error_msg}")
+            return {
+                "syntax_error": error_msg,
+                "syntax_retry_count": state["syntax_retry_count"] + 1
+            }
+        
+        print("[SYNTAX GATE] Validazione LOCALE...")
+        success, error_msg = local_parse(state["generated_code"])
+        
+        if success:
+            print("[SYNTAX GATE] ✓ Sintassi valida!")
+            return {
+                "syntax_error": None,
+                "syntax_retry_count": state["syntax_retry_count"]
+            }
+        else:
             retry_count = state["syntax_retry_count"] + 1
-            
-            print(f"[SYNTAX GATE] ✗ Errore Remoto: {error_msg}")
+            print(f"[SYNTAX GATE] ✗ Errore: {error_msg}")
             print(f"[SYNTAX GATE] Tentativo {retry_count}/{MAX_SYNTAX_RETRIES}")
-            
             return {
                 "syntax_error": error_msg,
                 "syntax_retry_count": retry_count
             }
-
-    # Fallback: esecuzione locale
-    if not LOCAL_EXECUTOR_AVAILABLE:
-        error_msg = "TOY_AGENT_API_URL non configurato e modulo locale non disponibile"
-        print(f"[SYNTAX GATE] ✗ {error_msg}")
-        return {
-            "syntax_error": error_msg,
-            "syntax_retry_count": state["syntax_retry_count"] + 1
-        }
-    
-    print("[SYNTAX GATE] Validazione LOCALE...")
-    success, error_msg = local_parse(state["generated_code"])
-    
-    if success:
-        print("[SYNTAX GATE] ✓ Sintassi valida!")
-        return {
-            "syntax_error": None,
-            "syntax_retry_count": state["syntax_retry_count"]
-        }
-    else:
-        retry_count = state["syntax_retry_count"] + 1
-        print(f"[SYNTAX GATE] ✗ Errore: {error_msg}")
-        print(f"[SYNTAX GATE] Tentativo {retry_count}/{MAX_SYNTAX_RETRIES}")
-        return {
-            "syntax_error": error_msg,
-            "syntax_retry_count": retry_count
-        }
 
 
 # ---------------------------------------------------------------------------
@@ -207,10 +236,13 @@ def tester_node(state: AgentState) -> dict:
 def executor_node(state: AgentState) -> dict:
     """Nodo Executor: esegue i test cases con ToyExecutor."""
     print("[EXECUTOR] Esecuzione test cases...")
+    
+    use_local = False
 
     if TOY_AGENT_API_URL:
         print(f"[EXECUTOR] Esecuzione REMOTA su {TOY_AGENT_API_URL}...")
         results = []
+        connection_failed = False
         
         for tc in state["test_cases"]:
             description = tc.description
@@ -229,7 +261,23 @@ def executor_node(state: AgentState) -> dict:
                     timeout=10
                 )
                 
-                resp_data = response.json()
+                # Check for server errors first
+                if response.status_code >= 500:
+                    print(f"[EXECUTOR] ⚠ Server error ({response.status_code}), fallback a locale...")
+                    connection_failed = True
+                    break
+                
+                # Try to parse JSON
+                try:
+                    resp_data = response.json()
+                except ValueError:
+                    # Non-JSON response (HTML error page)
+                    if "<html" in response.text.lower():
+                        print("[EXECUTOR] ⚠ API risponde con HTML, fallback a locale...")
+                        connection_failed = True
+                        break
+                    else:
+                        raise Exception(f"Invalid response: {response.text[:200]}")
                 
                 if response.status_code == 200:
                     actual_output_list = resp_data.get("output", [])
@@ -266,6 +314,10 @@ def executor_node(state: AgentState) -> dict:
                     ))
                     print(f"[EXECUTOR] ✗ ERROR: {error_msg}")
 
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                print(f"[EXECUTOR] ⚠ API non raggiungibile, fallback a locale...")
+                connection_failed = True
+                break
             except Exception as e:
                 results.append(TestResult(
                     test_description=description,
@@ -274,64 +326,68 @@ def executor_node(state: AgentState) -> dict:
                     expected_output=expected,
                     error_message=str(e)
                 ))
-                print(f"[EXECUTOR] ✗ CONNECTION ERROR: {str(e)}")
+                print(f"[EXECUTOR] ✗ ERROR: {str(e)}")
+        
+        if not connection_failed:
+            return {"test_results": results}
+        else:
+            use_local = True
+
+    # Esecuzione locale (fallback o primaria)
+    if not TOY_AGENT_API_URL or use_local:
+        if not LOCAL_EXECUTOR_AVAILABLE:
+            error_msg = "API non disponibile e modulo locale non presente"
+            print(f"[EXECUTOR] ✗ {error_msg}")
+            return {
+                "test_results": [TestResult(
+                    test_description="Setup Error",
+                    passed=False,
+                    actual_output="",
+                    expected_output="",
+                    error_message=error_msg
+                )]
+            }
+        
+        print("[EXECUTOR] Esecuzione LOCALE...")
+        results = []
+        
+        for tc in state["test_cases"]:
+            description = tc.description
+            inputs = tc.inputs
+            expected = tc.expected_output
+            
+            print(f"[EXECUTOR] Running: {description}")
+            
+            actual_output, error = local_execute(state["generated_code"], inputs)
+            
+            if error:
+                results.append(TestResult(
+                    test_description=description,
+                    passed=False,
+                    actual_output=actual_output,
+                    expected_output=expected,
+                    error_message=error
+                ))
+                print(f"[EXECUTOR] ✗ ERROR: {error}")
+            else:
+                passed = _verify_output(actual_output, expected)
+                
+                results.append(TestResult(
+                    test_description=description,
+                    passed=passed,
+                    actual_output=actual_output,
+                    expected_output=expected,
+                    error_message=None if passed else "Output mismatch"
+                ))
+                
+                status = "✓ PASS" if passed else "✗ FAIL"
+                print(f"[EXECUTOR] {status}")
+                
+                if not passed:
+                    print(f"  [EXPECTED]: {repr(expected)}")
+                    print(f"  [ACTUAL]  : {repr(actual_output)}")
         
         return {"test_results": results}
-
-    # Fallback: esecuzione locale
-    if not LOCAL_EXECUTOR_AVAILABLE:
-        error_msg = "TOY_AGENT_API_URL non configurato e modulo locale non disponibile"
-        print(f"[EXECUTOR] ✗ {error_msg}")
-        return {
-            "test_results": [TestResult(
-                test_description="Setup Error",
-                passed=False,
-                actual_output="",
-                expected_output="",
-                error_message=error_msg
-            )]
-        }
-    
-    print("[EXECUTOR] Esecuzione LOCALE...")
-    results = []
-    
-    for tc in state["test_cases"]:
-        description = tc.description
-        inputs = tc.inputs
-        expected = tc.expected_output
-        
-        print(f"[EXECUTOR] Running: {description}")
-        
-        actual_output, error = local_execute(state["generated_code"], inputs)
-        
-        if error:
-            results.append(TestResult(
-                test_description=description,
-                passed=False,
-                actual_output=actual_output,
-                expected_output=expected,
-                error_message=error
-            ))
-            print(f"[EXECUTOR] ✗ ERROR: {error}")
-        else:
-            passed = _verify_output(actual_output, expected)
-            
-            results.append(TestResult(
-                test_description=description,
-                passed=passed,
-                actual_output=actual_output,
-                expected_output=expected,
-                error_message=None if passed else "Output mismatch"
-            ))
-            
-            status = "✓ PASS" if passed else "✗ FAIL"
-            print(f"[EXECUTOR] {status}")
-            
-            if not passed:
-                print(f"  [EXPECTED]: {repr(expected)}")
-                print(f"  [ACTUAL]  : {repr(actual_output)}")
-    
-    return {"test_results": results}
 
 
 # ---------------------------------------------------------------------------

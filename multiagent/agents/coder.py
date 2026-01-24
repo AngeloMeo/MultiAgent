@@ -186,14 +186,25 @@ class CoderAgent:
                     
                     print(f"[CODER] CALLING TOOL: {tool_name} with args: {tool_args}")
                     
-                    # Esegui il tool appropriato
+                    # Cerca ed esegui il tool
+                    tool_found = False
                     for tool in CODER_TOOLS:
                         if tool.name == tool_name:
                             result = tool.invoke(tool_args)
                             self.messages.append(
                                 ToolMessage(content=result, tool_call_id=tool_call["id"])
                             )
+                            tool_found = True
                             break
+                    
+                    # Se il tool non esiste, informa l'LLM
+                    if not tool_found:
+                        available_tools = ", ".join(t.name for t in CODER_TOOLS)
+                        error_msg = f"Tool '{tool_name}' non esiste. Tools disponibili: {available_tools}"
+                        print(f"[CODER] ⚠ {error_msg}")
+                        self.messages.append(
+                            ToolMessage(content=error_msg, tool_call_id=tool_call["id"])
+                        )
                             
             else:
                 # Nessun tool call, l'LLM ha finito di esplorare
@@ -258,13 +269,23 @@ Correggi il codice per risolvere questo problema."""
                     
                     print(f"[CODER] CALLING TOOL: {tool_name} with args: {tool_args}")
                     
+                    tool_found = False
                     for tool in CODER_TOOLS:
                         if tool.name == tool_name:
                             result = tool.invoke(tool_args)
                             self.messages.append(
                                 ToolMessage(content=result, tool_call_id=tool_call["id"])
                             )
+                            tool_found = True
                             break
+                    
+                    if not tool_found:
+                        available_tools = ", ".join(t.name for t in CODER_TOOLS)
+                        error_msg = f"Tool '{tool_name}' non esiste. Tools disponibili: {available_tools}"
+                        print(f"[CODER] ⚠ {error_msg}")
+                        self.messages.append(
+                            ToolMessage(content=error_msg, tool_call_id=tool_call["id"])
+                        )
             else:
                 if response.content:
                     self.messages.append(response)
