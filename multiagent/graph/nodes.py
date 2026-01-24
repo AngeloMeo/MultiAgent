@@ -16,7 +16,15 @@ from ..models import ErrorReport, TestResult
 from ..config import MAX_SYNTAX_RETRIES, MAX_TEST_RETRIES, TOY_AGENT_API_URL
 
 from .state import AgentState
-from .local_executor import local_parse, local_execute
+
+# Import opzionale del modulo di esecuzione locale
+try:
+    from .local_executor import local_parse, local_execute
+    LOCAL_EXECUTOR_AVAILABLE = True
+except ImportError:
+    LOCAL_EXECUTOR_AVAILABLE = False
+    local_parse = None
+    local_execute = None
 
 
 # ---------------------------------------------------------------------------
@@ -145,8 +153,15 @@ def syntax_gate_node(state: AgentState) -> dict:
             }
 
     # Fallback: esecuzione locale
-    print("[SYNTAX GATE] Validazione LOCALE...")
+    if not LOCAL_EXECUTOR_AVAILABLE:
+        error_msg = "TOY_AGENT_API_URL non configurato e modulo locale non disponibile"
+        print(f"[SYNTAX GATE] ✗ {error_msg}")
+        return {
+            "syntax_error": error_msg,
+            "syntax_retry_count": state["syntax_retry_count"] + 1
+        }
     
+    print("[SYNTAX GATE] Validazione LOCALE...")
     success, error_msg = local_parse(state["generated_code"])
     
     if success:
@@ -264,6 +279,19 @@ def executor_node(state: AgentState) -> dict:
         return {"test_results": results}
 
     # Fallback: esecuzione locale
+    if not LOCAL_EXECUTOR_AVAILABLE:
+        error_msg = "TOY_AGENT_API_URL non configurato e modulo locale non disponibile"
+        print(f"[EXECUTOR] ✗ {error_msg}")
+        return {
+            "test_results": [TestResult(
+                test_description="Setup Error",
+                passed=False,
+                actual_output="",
+                expected_output="",
+                error_message=error_msg
+            )]
+        }
+    
     print("[EXECUTOR] Esecuzione LOCALE...")
     results = []
     
