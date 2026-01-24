@@ -6,7 +6,6 @@
 # ===========================================================================
 
 import sys
-import os
 import requests
 
 from ..agents.coder import create_coder_agent

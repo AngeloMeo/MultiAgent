@@ -303,8 +303,6 @@ Correggi il codice per risolvere questo problema."""
         except Exception as e:
             print(f"[CODER] ERROR in structured generation: {e}")
             return "", f"Errore generazione strutturata: {e}"
-    
-
 
 
 # ---------------------------------------------------------------------------

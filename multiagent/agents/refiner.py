@@ -11,7 +11,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from ..config import get_llm_config, REQUEST_DELAY_SEC
-from ..models import ErrorReport, TestResult
+from ..models import ErrorReport, ErrorType, TestResult
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ Identifica la causa dell'errore e suggerisci una correzione specifica."""
         except Exception as e:
             # Fallback: crea un report generico
             return ErrorReport(
-                error_type="Logical",
+                error_type=ErrorType.LOGICAL,
                 details=f"Analisi fallita: {str(e)}",
                 location=None,
                 suggestion="Rivedere la logica del programma"

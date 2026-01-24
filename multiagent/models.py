@@ -6,8 +6,20 @@
 # Per aggiungere campi: modifica le classi BaseModel qui sotto.
 # ===========================================================================
 
-from typing import Optional, Literal
+from typing import Optional
+from enum import Enum
 from pydantic import BaseModel, Field
+
+
+# ---------------------------------------------------------------------------
+#                           ERROR TYPE ENUM
+# ---------------------------------------------------------------------------
+
+class ErrorType(str, Enum):
+    """Enum per i tipi di errore supportati dal sistema."""
+    SYNTAX = "Syntax"
+    RUNTIME = "Runtime"
+    LOGICAL = "Logical"
 
 
 # ---------------------------------------------------------------------------
@@ -25,7 +37,7 @@ class ErrorReport(BaseModel):
         location: Posizione opzionale nel codice (es. "line 5")
         suggestion: Suggerimento per la correzione
     """
-    error_type: Literal["Syntax", "Runtime", "Logical"] = Field(
+    error_type: ErrorType = Field(
         description="Categoria dell'errore: Syntax (parsing), Runtime (esecuzione), Logical (output errato)"
     )
     details: str = Field(

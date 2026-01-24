@@ -9,7 +9,8 @@ import sys
 import argparse
 
 from multiagent.graph.graph import run_graph
-
+from multiagent.graph.nodes import _coder_agent
+import multiagent.graph.nodes as nodes_module
 
 def main():
     """
@@ -17,7 +18,6 @@ def main():
     
     Usage:
         python main.py "Scrivi un programma che calcola il fattoriale di 5"
-        python main.py --interactive
     """
     parser = argparse.ArgumentParser(
         description="Multi-Agent Toy-Agent Code Generator",
@@ -26,7 +26,6 @@ def main():
 Esempi:
   python main.py "Calcola la somma di due numeri"
   python main.py "Stampa i numeri da 1 a 10"
-  python main.py --interactive
         """
     )
     
@@ -36,45 +35,10 @@ Esempi:
         help="Descrizione del programma da generare"
     )
     
-    parser.add_argument(
-        "--interactive", "-i",
-        action="store_true",
-        help="Modalità interattiva (inserisci richieste una alla volta)"
-    )
-    
     args = parser.parse_args()
-    
-    if args.interactive:
-        print("=" * 60)
-        print("MULTI-AGENT TOY-AGENT CODE GENERATOR")
-        print("Modalità Interattiva - Digita 'exit' per uscire")
-        print("=" * 60)
-        
-        while True:
-            try:
-                request = input("\nRichiesta: ").strip()
-                if request.lower() in ("exit", "quit", "q"):
-                    print("Arrivederci!")
-                    break
-                if not request:
-                    continue
-                
-                # Reset coder agent per evitare context confusion
-                from multiagent.graph.nodes import _coder_agent
-                import multiagent.graph.nodes as nodes_module
-                nodes_module._coder_agent = None
-                    
-                result = run_graph(request)
-                
-            except KeyboardInterrupt:
-                print("\n\nInterrotto. Arrivederci!")
-                break
-            except Exception as e:
-                print(f"\nErrore: {e}")
-                continue
             
     
-    elif args.request:
+    if args.request:
         # Singola richiesta da linea di comando
         result = run_graph(args.request)
         
