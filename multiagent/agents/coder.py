@@ -139,123 +139,12 @@ class CoderAgent:
         
         self.messages = [SystemMessage(content=CODER_SYSTEM_PROMPT)]
     
-    def generate(self, user_request: str, syntax_error: str = None) -> tuple[str, str]:
+    def _execute_generation_loop(self, final_prompt_text: str) -> tuple[str, str]:
         """
-        Genera codice Toy-Agent per la richiesta utente.
-        
-        Args:
-            user_request: Descrizione del programma da generare
-            syntax_error: Errore di sintassi dalla iterazione precedente (opzionale)
-        
-        Returns:
-            Tuple (codice_toy, reasoning) con il codice generato e spiegazione.
+        Helper method che gestisce il loop di tool execution e la generazione finale.
         """
-        # Costruisci il messaggio utente
-        if syntax_error:
-            prompt = f"""Il codice precedente ha un errore di sintassi:
-
-                        ERRORE: {syntax_error}
-
-                        Correggi il codice per risolvere questo errore."""
-        else:
-            prompt = f"""Genera un programma Toy-Agent che: {user_request}
-
-                        Ricorda di:
-                        1. Consultare la documentazione con get_syntax_help prima di scrivere
-                        2. Includere il task entrypoint obbligatorio
-                        3. Dichiarare le variabili nel blocco memory:
-                        4. Terminare ogni statement con ;"""
-        
-        self.messages.append(HumanMessage(content=prompt))
-        
         # FASE 1: Loop per gestire tool calls (Esplorazione)
         while True:
-            print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
-            time.sleep(REQUEST_DELAY_SEC)
-            
-            # Invoca modello con tools
-            response = self.llm_with_tools.invoke(self.messages)
-            
-            # Se ci sono tool calls, eseguile e continua il loop
-            if response.tool_calls:
-                self.messages.append(response) # Aggiungi l'intenzione di chiamare tool alla history
-                
-                for tool_call in response.tool_calls:
-                    tool_name = tool_call["name"]
-                    tool_args = tool_call["args"]
-                    
-                    print(f"[CODER] CALLING TOOL: {tool_name} with args: {tool_args}")
-                    
-                    # Cerca ed esegui il tool
-                    tool_found = False
-                    for tool in CODER_TOOLS:
-                        if tool.name == tool_name:
-                            result = tool.invoke(tool_args)
-                            self.messages.append(
-                                ToolMessage(content=result, tool_call_id=tool_call["id"])
-                            )
-                            tool_found = True
-                            break
-                    
-                    # Se il tool non esiste, informa l'LLM
-                    if not tool_found:
-                        available_tools = ", ".join(t.name for t in CODER_TOOLS)
-                        error_msg = f"Tool '{tool_name}' non esiste. Tools disponibili: {available_tools}"
-                        print(f"[CODER] ⚠ {error_msg}")
-                        self.messages.append(
-                            ToolMessage(content=error_msg, tool_call_id=tool_call["id"])
-                        )
-                            
-            else:
-                # Nessun tool call, l'LLM ha finito di esplorare
-                # Aggiungiamo la risposta testuale (se c'è) alla history come "pensiero"
-                if response.content:
-                     self.messages.append(response)
-                break
-        
-        # FASE 2: Generazione Strutturata Finale
-        print("[CODER] Generazione output strutturato finale...")
-        
-        # Chiediamo esplicitamente l'output finale usando lo schema
-        final_prompt = HumanMessage(content="Ora genera il codice finale e la spiegazione usando lo schema richiesto.")
-        self.messages.append(final_prompt)
-        
-        try:
-            structured_response = self.llm_structured.invoke(self.messages)
-            
-            return structured_response.toy_code, structured_response.reasoning
-            
-        except Exception as e:
-            print(f"[CODER] ERROR in structured generation: {e}")
-            return "", f"Errore generazione strutturata: {e}"
-    
-    def generate_with_error_report(self, user_request: str, error_report) -> tuple[str, str]:
-        """
-        Genera codice correggendo errori runtime/logici dal Refiner.
-        
-        Args:
-            user_request: Richiesta originale
-            error_report: ErrorReport dal Refiner agent
-        
-        Returns:
-            Tuple (codice_toy, reasoning) con il codice corretto.
-        """
-        prompt = f"""La richiesta originale era: {user_request}
-
-Il codice precedente ha fallito i test con questo errore:
-
-TIPO: {error_report.error_type}
-DETTAGLI: {error_report.details}
-POSIZIONE: {error_report.location or "N/A"}
-SUGGERIMENTO: {error_report.suggestion}
-
-Correggi il codice per risolvere questo problema."""
-        
-        self.messages.append(HumanMessage(content=prompt))
-        
-        # FASE 1: Loop per gestire tool calls (Esplorazione)
-        while True:
-            # Rate limiting
             print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
             time.sleep(REQUEST_DELAY_SEC)
             
@@ -288,13 +177,13 @@ Correggi il codice per risolvere questo problema."""
                         )
             else:
                 if response.content:
-                    self.messages.append(response)
+                     self.messages.append(response)
                 break
         
         # FASE 2: Generazione Strutturata Finale
-        print("[CODER] Generazione output strutturato finale (Error Loop)...")
+        print("[CODER] Generazione output strutturato finale...")
         
-        final_prompt = HumanMessage(content="Ora genera il codice corretto finale e la spiegazione usando lo schema richiesto.")
+        final_prompt = HumanMessage(content=final_prompt_text)
         self.messages.append(final_prompt)
         
         try:
@@ -304,16 +193,78 @@ Correggi il codice per risolvere questo problema."""
             print(f"[CODER] ERROR in structured generation: {e}")
             return "", f"Errore generazione strutturata: {e}"
 
+    def generate(self, user_request: str, syntax_error: str = None) -> tuple[str, str]:
+        """
+        Genera codice Toy-Agent per la richiesta utente.
+        
+        Args:
+            user_request: Descrizione del programma da generare
+            syntax_error: Errore di sintassi dalla iterazione precedente (opzionale)
+        
+        Returns:
+            Tuple (codice_toy, reasoning) con il codice generato e spiegazione.
+        """
+        # Costruisci il messaggio utente
+        if syntax_error:
+            prompt = f"""Il codice precedente ha un errore di sintassi:
+
+ERRORE: {syntax_error}
+
+Correggi il codice per risolvere questo errore."""
+        else:
+            prompt = f"""Genera un programma Toy-Agent che: {user_request}
+
+Ricorda di:
+1. Consultare la documentazione con get_syntax_help prima di scrivere
+2. Includere il task entrypoint obbligatorio
+3. Dichiarare le variabili nel blocco memory:
+4. Terminare ogni statement con ;"""
+        
+        self.messages.append(HumanMessage(content=prompt))
+        
+        return self._execute_generation_loop("Ora genera il codice finale e la spiegazione usando lo schema richiesto.")
+    
+    def generate_with_error_report(self, user_request: str, error_report) -> tuple[str, str]:
+        """
+        Genera codice correggendo errori runtime/logici dal Refiner.
+        
+        Args:
+            user_request: Richiesta originale
+            error_report: ErrorReport dal Refiner agent
+        
+        Returns:
+            Tuple (codice_toy, reasoning) con il codice corretto.
+        """
+        prompt = f"""La richiesta originale era: {user_request}
+
+Il codice precedente ha fallito i test con questo errore:
+
+TIPO: {error_report.error_type}
+DETTAGLI: {error_report.details}
+POSIZIONE: {error_report.location or "N/A"}
+SUGGERIMENTO: {error_report.suggestion}
+
+Correggi il codice per risolvere questo problema."""
+        
+        self.messages.append(HumanMessage(content=prompt))
+        
+        return self._execute_generation_loop("Ora genera il codice corretto finale e la spiegazione usando lo schema richiesto.")
+
 
 # ---------------------------------------------------------------------------
 #                           FACTORY FUNCTION
 # ---------------------------------------------------------------------------
 
-def create_coder_agent() -> CoderAgent:
+_CODER_INSTANCE = None
+
+def get_coder_agent() -> CoderAgent:
     """
-    Factory function per creare un'istanza del Coder Agent.
+    Factory function per creare un'istanza Singleton del Coder Agent.
     
     Returns:
-        CoderAgent: Nuova istanza dell'agente.
+        CoderAgent: L'istanza condivisa dell'agente.
     """
-    return CoderAgent()
+    global _CODER_INSTANCE
+    if _CODER_INSTANCE is None:
+        _CODER_INSTANCE = CoderAgent()
+    return _CODER_INSTANCE

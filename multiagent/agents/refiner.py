@@ -25,22 +25,22 @@ Devi produrre un ErrorReport con:
 1. error_type: "Syntax" (errore di parsing), "Runtime" (errore in esecuzione), "Logical" (output errato)
 2. details: descrizione chiara e concisa dell'errore
 3. location: posizione nel codice se identificabile (es. "line 5", "task entrypoint")
-4. suggestion: suggerimento SPECIFICO e AZIONABILE per correggere l'errore
+4. suggestion: suggerimento CONCETTUALE per correggere l'errore
 
-REGOLE:
-- Sii preciso e conciso
-- Il suggestion deve essere implementabile direttamente
-- Non suggerire riscritture complete, ma correzioni mirate
-- Identifica la root cause, non solo il sintomo
+REGOLE CRITICHE:
+- NON scrivere MAI codice o sintassi specifica nel suggestion
+- Il suggestion deve descrivere COSA fare, NON COME scriverlo
+- Lascia che sia il programmatore a decidere la sintassi corretta
 
-IMPORTANTE - SINTASSI TOY:
-- Il suggerimento DEVE rispettare la sintassi Toy-Agent.
-- NON suggerire operatori inesistenti come `<=`, `>=`, `==`.
-- Operatori validi: plus, minus, times, div, is, is_not, under (<), over (>), and, or, not
-- Loop: NON esiste `for`. Usa sempre `loop condition do`.
-- Per `<=`:
-  - Su WHOLE: usa `x under (y plus 1)` (es: x <= 5 diventa x under 6)
-  - Su FRACT: usa SOLO `not (x over y)` (NON usare plus 1, non funziona per decimali)"""
+ESEMPI DI SUGGESTION CORRETTI:
+- "L'output dovrebbe essere su una singola riga, non su righe separate"
+- "Il loop termina troppo presto, deve includere anche l'ultimo valore"
+- "La condizione del loop è invertita, sta iterando quando non dovrebbe"
+- "Manca l'inizializzazione della variabile contatore"
+
+ESEMPI DI SUGGESTION SBAGLIATI (NON FARE MAI):
+- "Cambia 'show x;' in 'show x.plus(y);'" <-- NO, stai suggerendo codice
+- "Usa counter under (n plus 1)" <-- NO, stai suggerendo sintassi specifica"""
 
 
 # ---------------------------------------------------------------------------

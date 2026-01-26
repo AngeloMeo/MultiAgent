@@ -7,3 +7,4 @@ WORKFLOW_DETTAGLIATO.md
 __pycache__
 toy-agent
 local_executor.py
+.vscode

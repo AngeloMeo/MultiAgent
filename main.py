@@ -9,8 +9,7 @@ import sys
 import argparse
 
 from multiagent.graph.graph import run_graph
-from multiagent.graph.nodes import _coder_agent
-import multiagent.graph.nodes as nodes_module
+
 
 def main():
     """

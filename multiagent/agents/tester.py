@@ -10,7 +10,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from ..config import get_llm_config, REQUEST_DELAY_SEC
-from ..models import TestSuite, TestCase
+from ..models import TestSuite
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ REGOLE:
 
 IMPORTANTE - FORMATO OUTPUT:
 - Analizza il codice e le istruzioni 'show' per determinare l'output atteso, non inventarlo.
-- Se ci sono più output, saranno su righe separate.
+- Se ci sono più output, SARANNO SU RIGHE SEPARATE ("\n").
 
 
 Rispondi SOLO con JSON valido nel formato:
