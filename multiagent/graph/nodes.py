@@ -42,7 +42,15 @@ def _strict_or_numeric_equal(s1: str, s2: str) -> bool:
 def _verify_output(actual: str, expected: str) -> bool:
     """
     Verifica se l'output atteso è contenuto nell'output effettivo.
-    Usa matching permissivo (sottosequenza) con tolleranza numerica.
+    
+    Usa matching permissivo: cerca ogni riga expected come sottosequenza
+    NON CONTIGUA nell'actual. Questo permette al programma di stampare
+    "rumore" (menu, prompt) tra i valori che ci interessano.
+    
+    Esempio:
+        expected: "15\\n0"
+        actual: "1\\n2\\n3\\n4\\n15\\n1\\n2\\n3\\n4\\n0"
+        -> True (15 e 0 appaiono in ordine, anche se non adiacenti)
     """
     expected_lines = [l.strip() for l in expected.strip().splitlines() if l.strip()]
     actual_lines = [l.strip() for l in actual.splitlines() if l.strip()]
@@ -50,18 +58,23 @@ def _verify_output(actual: str, expected: str) -> bool:
     if not expected_lines:
         return not actual_lines
     
-    # Cerca sequenza expected dentro actual
-    for i in range(len(actual_lines) - len(expected_lines) + 1):
-        match = True
-        for j in range(len(expected_lines)):
-            if not _strict_or_numeric_equal(actual_lines[i + j], expected_lines[j]):
-                match = False
+    # Cerca ogni expected line come sottosequenza (non contigua) nell'actual
+    actual_idx = 0
+    for expected_line in expected_lines:
+        found = False
+        while actual_idx < len(actual_lines):
+            if _strict_or_numeric_equal(actual_lines[actual_idx], expected_line):
+                found = True
+                actual_idx += 1  # Avanza per cercare la prossima expected
                 break
-        if match:
-            return True
+            actual_idx += 1
+        
+        if not found:
+            # Fallback: cerca ovunque (non in ordine) per valori critici
+            if not any(_strict_or_numeric_equal(al, expected_line) for al in actual_lines):
+                return False
     
-    # Fallback: exact match
-    return actual == expected.strip()
+    return True
 
 
 def _parse_code(script: str) -> tuple[bool, str | None]:

@@ -65,7 +65,6 @@ class RefinerAgent:
             google_api_key=config["google_api_key"],
         )
         
-        # Structured output per ErrorReport
         self.llm_structured = self.llm.with_structured_output(ErrorReport)
     
     def analyze_failure(
@@ -85,7 +84,6 @@ class RefinerAgent:
         Returns:
             ErrorReport: Report strutturato con analisi e suggerimenti.
         """
-        # Prepara il riepilogo dei fallimenti
         failures = []
         for result in test_results:
             if not result.passed:

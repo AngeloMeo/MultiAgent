@@ -20,91 +20,51 @@ from ..models import CoderOutput
 
 CODER_SYSTEM_PROMPT = """Sei un esperto programmatore nel linguaggio Toy-Agent.
 
-REGOLE ASSOLUTAMENTE VIETATE - LEGGI PRIMA DI TUTTO:
+AZIONE OBBLIGATORIA:
+Prima di scrivere QUALSIASI codice, DEVI consultare la documentazione:
+1. get_syntax_help("limitations") - Leggi SEMPRE questo per primo!
+2. get_syntax_help("general") - Per la struttura base del programma
 
-VIETATO: Usare il carattere "ի" (carattere armeno) - MAI in nessun caso!
-VIETATO: Stampare prompt di input - NO `show "Inserisci..."`, NO `show "Digita..."`
-VIETATO: Concatenare tipi diversi - NO `"testo" plus numero`
-VIETATO: Usare escape nelle stringhe - NO `\'`, NO `\"`, NO `\\`
+=== REGOLA CRITICA SULL'OUTPUT ===
 
-COSA DEVI FARE:
+I programmi Toy-Agent vengono testati automaticamente confrontando l'output.
+DEVI stampare SOLO i valori risultanti, MAI testo descrittivo.
 
-OUTPUT: Stampa SOLO valori grezzi, MAI frasi descrittive.
-- CORRETTO: `show result;` (stampa solo il valore)
-- CORRETTO: `show "Errore";` (solo messaggi di stato brevi)
-- ERRATO: `show "Il risultato e:";` - VIETATO!
-- ERRATO: `show "Inserisci un numero:";` - VIETATO!
+VIETATO (causa SEMPRE fallimento dei test):
+- show "Menu:";
+- show "Inserisci un numero:";
+- show "Risultato:";
+- show "Scelta:";
+- show "Errore:";
+- QUALSIASI show con testo che descrive cosa sta per succedere
 
-INPUT: Usa `grab variabile;` SENZA messaggi di prompt.
-- CORRETTO: `grab scelta;`
-- ERRATO: `show "Inserisci la scelta:"; grab scelta;` - VIETATO!
+PERMESSO (solo questi pattern):
+- show result;              % Stampa il valore numerico
+- show 0;                   % Stampa un letterale
+- grab choice;              % Leggi input SENZA prompt prima
 
----
+ESEMPIO MENU/CALCOLATRICE:
+```
+% SBAGLIATO - Fallirà SEMPRE i test:
+show "1. Somma";
+show "2. Sottrai";
+grab choice;
 
-REGOLE SINTATTICHE:
+% CORRETTO - Solo valori:
+grab choice;
+grab num1;
+grab num2;
+show result;
+```
 
-1. STRUTTURA OBBLIGATORIA:
-   - Ogni variabile nel blocco memory: inizia con `keep`
-   - Ogni programma ha un task "entrypoint" senza parametri
-   - Commenti usano `%` (NON `#`)
+=== ALTRE REGOLE ===
+- NO carattere armeno "ի"
+- NO escape nelle stringhe (\\', \\", \\\\)
+- NO ricorsione (i parametri sono globali)
+- Commenti con % (NON #)
 
-2. TIPIZZAZIONE STRETTA - NESSUNA CONVERSIONE:
-   - NON esiste conversione tra tipi (whole, fract, quote, flag)
-   - NON puoi assegnare un whole a una variabile quote
-
-3. OPERATORI:
-   plus, minus, times, div, is, is_not, under, over, and, or, not
-
-4. FORMATO OUTPUT OBBLIGATORIO:
-   - Restituisci il codice SEMPRE all'interno di blocchi markdown:
-   ```toy
-   memory:
-       ...
-   end_memory
-   ...
-   ```
-
-5. STRINGHE:
-   - Le stringhe usano SOLO doppi apici: "testo"
-   - NON usare MAI backslash o escape
-
-6. CHIAMATA TASK:
-   - Sintassi: `nome_task run [arg1, arg2];`
-   - NON usare: `call nome_task(arg1, arg2);`
-
-7. SIGNATURE TASK:
-   - OGNI task DEVE avere `-> tipo:` (anche se non ritorna nulla usa `-> whole:`)
-   - ERRATO: `task entrypoint [] :`
-   - CORRETTO: `task entrypoint [] -> whole:`
-
-8. CONDIZIONALI (check/alt_check):
-   - `alt_check` fa parte dello STESSO blocco `check`
-   - UN SOLO `close;` alla fine dell'intera catena
-   - CORRETTO:
-     ```
-     check x is 1 then
-         ...
-     alt_check x is 2 then
-         ...
-     close;
-     ```
-
-9. LOOP - NO BREAK:
-   - NON esiste `break`. Usa un flag per uscire.
-   - CORRETTO:
-     ```toy
-     running << yes;
-     loop running is yes do
-         check choice is 5 then
-             running << no;
-         close;
-     close;
-     ```
-
-10. RICORSIONE NON FUNZIONA:
-    - I parametri sono globali e si sovrascrivono. Usa SEMPRE loop.
-
-Consulta get_syntax_help("control_flow") per strutture condizionali complesse."""
+FORMATO RISPOSTA:
+Restituisci il codice in blocchi markdown ```toy ... ```"""
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +103,6 @@ class CoderAgent:
         """
         Helper method che gestisce il loop di tool execution e la generazione finale.
         """
-        # FASE 1: Loop per gestire tool calls (Esplorazione)
         while True:
             print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
             time.sleep(REQUEST_DELAY_SEC)
@@ -180,7 +139,6 @@ class CoderAgent:
                      self.messages.append(response)
                 break
         
-        # FASE 2: Generazione Strutturata Finale
         print("[CODER] Generazione output strutturato finale...")
         
         final_prompt = HumanMessage(content=final_prompt_text)
@@ -204,7 +162,7 @@ class CoderAgent:
         Returns:
             Tuple (codice_toy, reasoning) con il codice generato e spiegazione.
         """
-        # Costruisci il messaggio utente
+        
         if syntax_error:
             prompt = f"""Il codice precedente ha un errore di sintassi:
 

@@ -34,7 +34,7 @@ done
 
 REGOLE FONDAMENTALI:
 1. Tutti i programmi DEVONO avere un task chiamato "entrypoint"
-2. Le variabili globali vanno dichiarate nel blocco memory:
+2. Tutte le variabili DEVONO essere dichiarate nel blocco memory:
 3. Ogni statement termina con punto e virgola (;)
 4. I blocchi task terminano con "done"
 """,
@@ -157,12 +157,24 @@ IMPORTANTE:
 - Le condizioni DEVONO essere di tipo flag (yes/no)
 - Non sono ammessi interi come booleani
 - Ogni blocco termina con "close;"
+- NON ESISTE `break`! Per uscire da un loop usa un flag.
 
-ESEMPIO:
+ESEMPIO BASE:
 ```
 loop counter under 10 do
     counter << counter plus 1;
     show counter;
+close;
+```
+
+ESEMPIO USCITA CON FLAG (invece di break):
+```
+running << yes;
+loop running is yes do
+    grab choice;
+    check choice is 0 then
+        running << no;  % Questo fa uscire dal loop!
+    close;
 close;
 ```
 """,
@@ -178,6 +190,11 @@ task nome_task [param1 as tipo, param2 as tipo] -> tipo_ritorno:
 done
 ```
 
+ATTENZIONE - SIGNATURE OBBLIGATORIA:
+- OGNI task DEVE avere `-> tipo:` (anche se non ritorna nulla usa `-> whole:`)
+- ERRATO: `task entrypoint [] :`
+- CORRETTO: `task entrypoint [] -> whole:`
+
 CHIAMATA (come statement):
 ```
 nome_task run [arg1, arg2];
@@ -187,6 +204,8 @@ CHIAMATA (come espressione):
 ```
 result << nome_task run [arg1, arg2];
 ```
+
+NOTA: NON usare mai sintassi tipo `call nome_task(arg1, arg2)` - non esiste!
 
 REGOLE:
 1. Il task "entrypoint" è obbligatorio e non ha parametri
@@ -203,6 +222,28 @@ task entrypoint [] -> whole:
     result << sum run [5, 3];
     show result;
 done
+```
+""",
+
+    "strings": """
+# Stringhe in Toy-Agent
+
+REGOLE STRINGHE:
+1. Usare SOLO doppi apici: "testo"
+2. NON usare MAI backslash o escape: \\', \\", \\\\
+3. NON puoi concatenare quote con altri tipi
+
+CORRETTO:
+```
+msg << "Hello World";
+full << "Hello " plus "World";  % quote + quote OK
+```
+
+ERRATO:
+```
+msg << 'Hello';           % Singoli apici NON supportati
+msg << "Hello\\"World";    % Escape NON supportato
+msg << "Valore: " plus x; % quote + whole ERRORE
 ```
 """,
 
@@ -333,8 +374,7 @@ memory:
 end_memory
 
 task entrypoint [] -> whole:
-    show "Inserisci un numero:";
-    grab n;
+    grab n;  % NO prompt! Solo grab diretto
     
     result << 1;
     i << 1;
@@ -344,9 +384,7 @@ task entrypoint [] -> whole:
         i << i plus 1;
     close;
     
-    % OUTPUT CORRETTO: show separati per stringhe e numeri
-    % NON PROVARE MAI a concatenare o convertire tipi!
-    show "Fattoriale:";
+    % OUTPUT: solo valori grezzi, MAI frasi descrittive
     show result;
 done
 ```
@@ -380,8 +418,9 @@ def get_syntax_help(topic: str) -> str:
                - "general": panoramica del linguaggio
                - "types": tipi di dato (whole, fract, quote, flag)
                - "operators": operatori aritmetici, logici, comparazione
-               - "control_flow": check/alt, loop
-               - "tasks": definizione e chiamata di task
+               - "control_flow": check/alt, loop (include pattern uscita con flag)
+               - "tasks": definizione e chiamata di task (signature obbligatoria)
+               - "strings": regole stringhe e escape (VIETATI)
                - "io": show e grab
                - "memory": blocco dichiarazioni variabili
     

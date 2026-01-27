@@ -77,15 +77,22 @@ def create_initial_state(user_request: str) -> AgentState:
         AgentState: Stato iniziale con tutti i campi inizializzati.
     """
     return AgentState(
+        #Input iniziale
         user_request=user_request,
+        # Output del Coder
         generated_code="",
         reasoning="",
+        # Syntax Gate (Inner Loop)
         syntax_error=None,
         syntax_retry_count=0,
+        # Test Generation
         test_cases=[],
+        # Test Execution
         test_results=[],
+        # Refiner Output
         error_report=None,
         test_retry_count=0,
+        # Final State
         success=False,
         final_output=""
     )
