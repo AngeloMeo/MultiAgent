@@ -75,6 +75,7 @@ def _parse_code(script: str) -> tuple[bool, str | None]:
     # Prova remoto
     if TOY_AGENT_API_URL:
         try:
+            print(f"[PARSE] 🚀 Parsing remoto")
             response = requests.post(
                 f"{TOY_AGENT_API_URL}/parse",
                 json={"script": script},
@@ -118,6 +119,7 @@ def _execute_code(script: str, inputs: list) -> tuple[str, str | None]:
     # Prova remoto
     if TOY_AGENT_API_URL:
         try:
+            print(f"[EXECUTE] 🚀 Esecuzione remota")
             response = requests.post(
                 f"{TOY_AGENT_API_URL}/run",
                 json={"script": script, "inputs": inputs},
@@ -182,7 +184,8 @@ def coder_node(state: AgentState) -> dict:
         "generated_code": code,
         "reasoning": reasoning,
         "syntax_error": None,
-        "error_report": None
+        "error_report": None,
+        **({"syntax_retry_count": 0} if state.get("error_report") else {})
     }
 
 
