@@ -1,17 +1,25 @@
 # ===========================================================================
 #                       NODES - Graph Node Functions
 # ===========================================================================
-# Funzioni per gestire la chiamata di ogni nodo del grafo LangGraph.
+# Funzioni nodo per il grafo LangGraph.
 # Ogni funzione riceve lo stato, lo modifica e lo restituisce.
+# Include nodi per: Coder (subgraph), Syntax Gate, Tester, Executor, 
+# Refiner, Success, Failure.
 # ===========================================================================
 
-import requests
+from typing import Literal
 
-from ..agents.coder import create_coder_agent
+import requests
+from langchain_core.messages import SystemMessage, HumanMessage
+
+from ..agents.coder import create_coder_agent, CODER_SYSTEM_PROMPT
 from ..agents.tester import create_tester_agent
 from ..agents.refiner import create_refiner_agent
 from ..models import TestResult
-from ..config import MAX_SYNTAX_RETRIES, MAX_TEST_RETRIES, TOY_AGENT_API_URL, EXECUTION_TIMEOUT
+from ..config import (
+    MAX_SYNTAX_RETRIES, MAX_TEST_RETRIES, 
+    TOY_AGENT_API_URL, EXECUTION_TIMEOUT
+)
 
 from .state import AgentState
 
@@ -169,51 +177,70 @@ def _execute_code(script: str, inputs: list) -> tuple[str, str | None]:
 
 
 # ---------------------------------------------------------------------------
-#                           CODER NODE
+#                           CODER SUBGRAPH NODES
 # ---------------------------------------------------------------------------
 
-def coder_node(state: AgentState) -> dict:
-    """Nodo Coder: genera o corregge codice Toy-Agent."""
-    print("[CODER] Generazione codice...")
+def coder_reasoning_node(state: AgentState) -> dict:
+    """
+    Nodo di ragionamento del Coder: chiama agent.reason() per tool exploration.
     
+    Adapter tra AgentState e CoderAgent.
+    """
     coder = create_coder_agent()
-    
-    # Recupera messages da state (può essere lista vuota al primo giro)
     messages = list(state.get("messages", []))
     
-    if state.get("error_report"):
-        code, reasoning, updated_messages = coder.generate_with_error_report(
-            messages,
-            state["user_request"], 
-            state["error_report"]
-        )
-    elif state.get("syntax_error"):
-        code, reasoning, updated_messages = coder.generate(
-            messages,
-            state["user_request"],
-            syntax_error=state["syntax_error"]
-        )
-    else:
-        code, reasoning, updated_messages = coder.generate(
-            messages,
-            state["user_request"]
-        )
+    # Inizializza con SystemMessage se vuoto
+    if not messages or not isinstance(messages[0], SystemMessage):
+        messages = [SystemMessage(content=CODER_SYSTEM_PROMPT)] + messages
     
-    print(f"[CODER] Codice generato ({len(code)} chars)")
+    # Chiama il metodo dell'agente
+    response = coder.reason(messages, state)
+    messages.append(response)
+    
+    return {"messages": messages}
+
+
+def coder_structuring_node(state: AgentState) -> dict:
+    """
+    Nodo di strutturazione del Coder: chiama agent.structure() per output JSON.
+    
+    Adapter tra AgentState e CoderAgent.
+    """
+    coder = create_coder_agent()
+    messages = list(state.get("messages", []))
+    
+    # Chiama il metodo dell'agente
+    result = coder.structure(messages)
     
     return {
-        "messages": updated_messages,
-        "generated_code": code,
-        "reasoning": reasoning,
+        "generated_code": result.toy_code,
+        "reasoning": result.reasoning,
         "syntax_error": None,
         "error_report": None,
-        **({"syntax_retry_count": 0} if state.get("error_report") else {})
     }
+
+
+def after_reasoning(state: AgentState) -> Literal["tools", "structure"]:
+    """
+    Routing dopo reasoning: se ci sono tool calls -> tools, altrimenti -> structure.
+    """
+    messages = state.get("messages", [])
+    if not messages:
+        return "structure"
+    
+    last_message = messages[-1]
+    
+    # Controlla se l'ultimo messaggio ha tool calls
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+    
+    return "structure"
 
 
 # ---------------------------------------------------------------------------
 #                           SYNTAX GATE NODE
 # ---------------------------------------------------------------------------
+
 
 def syntax_gate_node(state: AgentState) -> dict:
     """Nodo Syntax Gate: valida il codice con ToyParser."""

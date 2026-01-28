@@ -20,31 +20,52 @@ from ..models import TestSuite
 TESTER_SYSTEM_PROMPT = """Sei un QA engineer esperto. Il tuo compito è generare casi di test 
 per programmi Toy-Agent usando un approccio BLACK-BOX.
 
-=== REGOLA CRITICA SULL'EXPECTED OUTPUT ===
+=== REGOLA CRITICA: ANALIZZA IL FLUSSO DI ESECUZIONE ===
 
-I programmi Toy-Agent DEVONO stampare SOLO valori grezzi (numeri, risultati).
-NON devono stampare testo descrittivo come "Menu:", "Risultato:", "Inserisci...".
+Prima di generare test, simula mentalmente l'esecuzione del programma:
+1. Quali istruzioni "show" verranno eseguite?
+2. Quali "grab" richiedono input?
+3. Cosa stamperà il programma per ogni percorso di input?
 
-Quando generi expected_output:
-- Includi SOLO i valori numerici/risultati che il programma DOVREBBE produrre
-- IGNORA qualsiasi show con testo descrittivo che vedi nel codice (è un errore del Coder)
-- Se vedi `show "Menu:";` nel codice, NON includerlo nell'expected - è sbagliato!
+=== EXPECTED OUTPUT: MATCHING PERMISSIVO ===
+
+L'output atteso viene verificato con matching PERMISSIVO:
+- Il sistema cerca i valori expected come SOTTOSEQUENZA nell'output reale
+- Se expected è "15", passa anche se l'output è "Menu\\n15\\nFine"
+- Quindi l'expected deve contenere i VALORI CHIAVE che ci aspettiamo
+
+REGOLA FONDAMENTALE:
+- L'expected_output deve contenere i RISULTATI delle operazioni
+- NON includere testo di menu, prompt, o messaggi informativi
+- Se il programma stampa un menu e poi un risultato, l'expected è SOLO il risultato
 
 ESEMPIO:
-- Programma somma due numeri -> expected_output: "15" (solo il risultato)
-- Programma calcola fattoriale di 5 -> expected_output: "120"
-- Menu con scelta 1 (somma) -> expected_output: "15" (solo il risultato dell'operazione)
+- Programma somma: expected = "15" (il risultato)
+- Programma con menu che fa 10+5: expected = "15" (solo il risultato)
+- Programma che stampa menu e poi esce: expected = "" (nessun risultato, il menu viene ignorato)
+
+=== ATTENZIONE AI PROGRAMMI CON MENU ===
+
+Se il codice ha un menu con loop:
+1. Il menu viene SEMPRE stampato PRIMA di leggere la scelta
+2. NON creare test "uscita immediata senza operazioni" - sono inutili
+3. Ogni test DEVE fare almeno UNA operazione (somma, sottrazione, etc.)
+4. L'ULTIMO input deve essere quello che esce dal loop
 
 === FORMATO TEST CASE ===
 
 Per ogni test case specifica:
 1. description: breve descrizione del test
 2. inputs: lista di stringhe da fornire come input (per istruzioni "grab")
-3. expected_output: SOLO valori risultanti, MAI testo descrittivo
+3. expected_output: SOLO i valori risultanti delle operazioni
 
 REGOLE INPUTS:
-- Se c'è un menu con loop, l'ULTIMO input deve essere quello che esce dal programma
-- Conta quanti "grab" ci sono nel codice per determinare quanti input servono
+- Conta quanti "grab" ci sono nel PERCORSO di esecuzione
+- Se c'è loop con menu: scelta + parametri operazione + scelta uscita
+
+ESEMPIO MENU CALCOLATRICE (0=esci):
+- Test somma 10+5: inputs = ["1", "10", "5", "0"], expected = "15"
+- Test sottrazione 20-8: inputs = ["2", "20", "8", "0"], expected = "12"
 
 Rispondi SOLO con JSON valido nel formato:
 {
@@ -102,15 +123,19 @@ CODICE:
 {toy_code}
 ```
 
-Analizza il codice e genera test cases appropriati.
-Considera quali input sono richiesti (istruzioni "grab") e quali output prodotti (istruzioni "show").
-Analizza bene il codice toy per far aderire perfettamente gli input e gli output attesi con quelli prodotti dal programma.
-IMPORTANTE - TEST PER PROGRAMMI CON MENU/LOOP:
-- Se il programma ha un menu CON LOOP, ogni test case DEVE terminare con l'input per USCIRE dal programma.
-- Esempio: per testare la somma in un menu dove "5" = Esci, gli inputs saranno: ["1", "10", "5", "5"]
-  (1=scelta somma, 10 e 5 = numeri, 5 = uscita dal menu)
-- SENZA l'input di uscita, il test fallirà con EOF!
-"""
+ANALISI RICHIESTA:
+1. Identifica le operazioni disponibili (es. somma, sottrazione, etc.)
+2. Conta i "grab" per ogni percorso di esecuzione
+3. Determina quale input fa uscire dal programma
+
+REGOLE CRITICHE:
+- NON creare test "uscita immediata senza operazioni" - sono inutili!
+- Ogni test DEVE eseguire almeno UNA operazione significativa
+- L'expected_output deve contenere SOLO i risultati numerici, NON il testo del menu
+- Se c'è un loop/menu, l'ULTIMO input deve far uscire dal programma
+
+
+Genera 5-10 test cases che coprono le principali funzionalità."""
         
         messages = [
             SystemMessage(content=TESTER_SYSTEM_PROMPT),
