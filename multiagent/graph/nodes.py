@@ -51,17 +51,46 @@ def _verify_output(actual: str, expected: str) -> bool:
     """
     Verifica se l'output atteso è contenuto nell'output effettivo.
     
-    Usa matching permissivo: cerca ogni riga expected come sottosequenza
-    NON CONTIGUA nell'actual. Questo permette al programma di stampare
-    "rumore" (menu, prompt) tra i valori che ci interessano.
+    Supporta "Newline Magic String" Strategy:
+    Poiché Toy-Agent non può concatenare stringhe e numeri facilmente e aggiunge
+    sempre newline, la strategia è:
+    1. Stampare il token ">>>" su una riga
+    2. Stampare il risultato sulla riga successiva
+    
+    Il verificatore cerca ">>>" e prende la riga DOPO come valore da testare.
     
     Esempio:
-        expected: "15\\n0"
-        actual: "1\\n2\\n3\\n4\\n15\\n1\\n2\\n3\\n4\\n0"
-        -> True (15 e 0 appaiono in ordine, anche se non adiacenti)
+        actual: "Menu...\n>>>\n15\nMenu..."
+        expected: "15"
+        -> True
     """
+    raw_lines = [l.strip() for l in actual.splitlines() if l.strip()]
+    magic_values = []
+    
+    # Scansiona le righe cercando il token ">>>"
+    i = 0
+    while i < len(raw_lines):
+        line = raw_lines[i]
+        # Se la riga è il magic token (o inizia con esso)
+        if line.startswith(">>>"):
+            # Caso 1: ">>> 15" (se riuscissimo a farlo)
+            val = line[3:].strip()
+            if val:
+                magic_values.append(val)
+            # Caso 2: ">>>" e valore alla riga dopo (Newline Strategy)
+            elif i + 1 < len(raw_lines):
+                magic_values.append(raw_lines[i+1])
+                i += 1 # Salta la riga del valore
+        i += 1
+            
+    # Se abbiamo trovato magic values, usiamo SOLO quelli
+    if magic_values:
+        actual_lines = magic_values
+    else:
+        # Fallback: usa tutto l'output
+        actual_lines = raw_lines
+        
     expected_lines = [l.strip() for l in expected.strip().splitlines() if l.strip()]
-    actual_lines = [l.strip() for l in actual.splitlines() if l.strip()]
     
     if not expected_lines:
         return not actual_lines

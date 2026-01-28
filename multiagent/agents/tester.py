@@ -27,22 +27,24 @@ Prima di generare test, simula mentalmente l'esecuzione del programma:
 2. Quali "grab" richiedono input?
 3. Cosa stamperà il programma per ogni percorso di input?
 
-=== EXPECTED OUTPUT: MATCHING PERMISSIVO ===
+=== EXPECTED OUTPUT: MAGIC STRING MATCHING ===
 
-L'output atteso viene verificato con matching PERMISSIVO:
-- Il sistema cerca i valori expected come SOTTOSEQUENZA nell'output reale
-- Se expected è "15", passa anche se l'output è "Menu\\n15\\nFine"
-- Quindi l'expected deve contenere i VALORI CHIAVE che ci aspettiamo
+Il sistema di test usa una strategia "Magic String" per i risultati:
+- Il programma stamperà il risultato preceduto da ">>> " (es. ">>> 120")
+- Tu devi specificare come `expected_output` SOLO il valore RAW (es. "120")
+- Il sistema estrarrà il valore dopo ">>>" e lo confronterà con il tuo expected.
 
 REGOLA FONDAMENTALE:
-- L'expected_output deve contenere i RISULTATI delle operazioni
-- NON includere testo di menu, prompt, o messaggi informativi
-- Se il programma stampa un menu e poi un risultato, l'expected è SOLO il risultato
+- L'expected_output deve contenere ESATTAMENTE il valore atteso (numero o stringa)
+- NON includere ">>>" nel campo expected_output
+- NON includere testo di menu.
 
 ESEMPIO:
-- Programma somma: expected = "15" (il risultato)
-- Programma con menu che fa 10+5: expected = "15" (solo il risultato)
-- Programma che stampa menu e poi esce: expected = "" (nessun risultato, il menu viene ignorato)
+- Programma calcola 10+5
+- Output reale: "Menu...\n>>> 15"
+- Tuo expected_output: "15" (CORRETTO)
+- Tuo expected_output: ">>> 15" (ERRATO)
+- Tuo expected_output: "Risultato: 15" (ERRATO)
 
 === ATTENZIONE AI PROGRAMMI CON MENU ===
 

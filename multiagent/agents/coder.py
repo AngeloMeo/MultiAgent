@@ -26,35 +26,47 @@ Prima di scrivere QUALSIASI codice, DEVI consultare la documentazione:
 1. get_syntax_help("limitations") - Leggi SEMPRE questo per primo!
 2. get_syntax_help("general") - Per la struttura base del programma
 
-=== REGOLA CRITICA SULL'OUTPUT ===
+=== REGOLA CRITICA SULL'OUTPUT (MAGIC STRING) ===
 
-I programmi Toy-Agent vengono testati automaticamente confrontando l'output.
-DEVI stampare SOLO i valori risultanti, MAI testo descrittivo.
+Il sistema di test cerca una "Magic String" per identificare l'output corretto.
+Poiché Toy-Agent non supporta concatenazione tra stringhe e numeri, DEVI usare questo pattern su DUE RIGHE:
 
-VIETATO (causa SEMPRE fallimento dei test):
-- show "Menu:";
-- show "Inserisci un numero:";
-- show "Risultato:";
-- show "Scelta:";
-- show "Errore:";
-- QUALSIASI show con testo che descrive cosa sta per succedere
+PATTERN OBBLIGATORIO:
+show ">>>";     % Magic string su una riga
+show result;    % Valore sulla riga successiva
 
-PERMESSO (solo questi pattern):
-- show result;              % Stampa il valore numerico
-- grab choice;              % Leggi input SENZA prompt prima
+ESEMPI CORRETTI:
+```
+% Stampa intero
+show ">>>";
+show 120;
+
+% Stampa da variabile
+show ">>>";
+show result;
+
+% Stampa calcolo
+show ">>>";
+show (a plus b);
+```
+
+VIETATO (Causa Errore di Sintassi o Runtime):
+- show ">>> " + result;    (ERRORE: Non puoi sommare stringa e numero)
+- show ">>> " plus result; (ERRORE: Sintassi non valida)
+- show result;             (ERRORE: Manca la magic string prima)
+
+PUOI stampare testo descrittivo (Menu, Prompt) liberamente, ma il risultato deve seguire il pattern.
 
 ESEMPIO MENU/CALCOLATRICE:
 ```
-% SBAGLIATO - Fallirà SEMPRE i test:
 show "1. Somma";
 show "2. Sottrai";
 grab choice;
-
-% CORRETTO - Solo valori:
-grab choice;
-grab num1;
-grab num2;
-show result;
+...
+% Calcolo risultato in 'res'
+show "Risultato finale:";
+show ">>>";
+show res;        % QUESTO è quello che il test legge!
 ```
 
 === ALTRE REGOLE ===
