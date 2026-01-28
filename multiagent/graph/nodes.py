@@ -7,7 +7,7 @@
 
 import requests
 
-from ..agents.coder import get_coder_agent
+from ..agents.coder import create_coder_agent
 from ..agents.tester import create_tester_agent
 from ..agents.refiner import create_refiner_agent
 from ..models import TestResult
@@ -176,24 +176,33 @@ def coder_node(state: AgentState) -> dict:
     """Nodo Coder: genera o corregge codice Toy-Agent."""
     print("[CODER] Generazione codice...")
     
-    coder = get_coder_agent()
+    coder = create_coder_agent()
+    
+    # Recupera messages da state (può essere lista vuota al primo giro)
+    messages = list(state.get("messages", []))
     
     if state.get("error_report"):
-        code, reasoning = coder.generate_with_error_report(
+        code, reasoning, updated_messages = coder.generate_with_error_report(
+            messages,
             state["user_request"], 
             state["error_report"]
         )
     elif state.get("syntax_error"):
-        code, reasoning = coder.generate(
+        code, reasoning, updated_messages = coder.generate(
+            messages,
             state["user_request"],
             syntax_error=state["syntax_error"]
         )
     else:
-        code, reasoning = coder.generate(state["user_request"])
+        code, reasoning, updated_messages = coder.generate(
+            messages,
+            state["user_request"]
+        )
     
     print(f"[CODER] Codice generato ({len(code)} chars)")
     
     return {
+        "messages": updated_messages,
         "generated_code": code,
         "reasoning": reasoning,
         "syntax_error": None,

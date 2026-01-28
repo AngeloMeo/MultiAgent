@@ -6,7 +6,10 @@
 # Per aggiungere campi: modificare AgentState e aggiornare i nodi.
 # ===========================================================================
 
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Annotated
+
+from langgraph.graph.message import add_messages
+from langchain_core.messages import AnyMessage
 
 from ..models import ErrorReport, TestCase, TestResult
 
@@ -23,6 +26,7 @@ class AgentState(TypedDict):
     attraverso i nodi del grafo, accumulando informazioni ad ogni step.
     
     Attributes:
+        messages: History conversazione LLM per il Coder (con accumulo automatico)
         user_request: Richiesta originale dell'utente
         generated_code: Codice Toy-Agent generato dal Coder
         reasoning: Spiegazione del Coder sulle scelte implementative
@@ -35,6 +39,9 @@ class AgentState(TypedDict):
         success: Flag di completamento con successo
         final_output: Messaggio finale per l'utente
     """
+    
+    # Coder conversation history (accumulates via add_messages reducer)
+    messages: Annotated[list[AnyMessage], add_messages]
     
     # Input iniziale
     user_request: str
@@ -77,7 +84,11 @@ def create_initial_state(user_request: str) -> AgentState:
         AgentState: Stato iniziale con tutti i campi inizializzati.
     """
     return AgentState(
-        #Input iniziale
+        # Coder conversation history 
+        # (inizialmente vuoto, 
+        # SystemMessage aggiunto da coder_node)
+        messages=[],
+        # Input iniziale
         user_request=user_request,
         # Output del Coder
         generated_code="",
