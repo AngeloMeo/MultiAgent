@@ -11,6 +11,7 @@ from langgraph.prebuilt import ToolNode
 
 from ..config import MAX_SYNTAX_RETRIES, MAX_TEST_RETRIES
 from ..tools import CODER_TOOLS
+from ..models import ErrorType
 from .state import AgentState, create_initial_state
 from .nodes import (
     # Coder subgraph nodes
@@ -36,19 +37,20 @@ def after_syntax_gate(state: AgentState) -> str:
     Decisione dopo il Syntax Gate.
     
     Returns:
-        "tester" se sintassi OK
-        "coder" se errore e tentativi disponibili
+        "tester" se sintassi OK (no error_report)
+        "coder" se errore SYNTAX e tentativi disponibili
         "failure" se superato limite tentativi
     """
-    if state["syntax_error"] is None:
-        # Sintassi OK -> vai al Tester
+    err = state.get("error_report")
+    
+    if err is None:
         return "tester"
-    elif state["syntax_retry_count"] >= MAX_SYNTAX_RETRIES:
-        # Troppi errori -> fallimento
-        return "failure"
-    else:
-        # Errore recuperabile -> riprova
+    elif err.error_type == ErrorType.SYNTAX:
+        if state["syntax_retry_count"] >= MAX_SYNTAX_RETRIES:
+            return "failure"
         return "coder"
+    else:
+        return "tester"
 
 
 def after_executor(state: AgentState) -> str:

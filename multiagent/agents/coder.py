@@ -8,11 +8,11 @@
 
 import time
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 from ..config import get_llm_config, REQUEST_DELAY_SEC
 from ..tools import CODER_TOOLS
-from ..models import CoderOutput
+from ..models import CoderOutput, ErrorType
 
 
 # ---------------------------------------------------------------------------
@@ -93,10 +93,8 @@ class CoderAgent:
             google_api_key=config["google_api_key"],
         )
         
-        # Motore 1: Ragionamento libero + Tools
         self.llm_with_tools = base_llm.bind_tools(CODER_TOOLS)
         
-        # Motore 2: Output Strutturato (JSON)
         self.llm_structured = base_llm.with_structured_output(CoderOutput)
     
     def build_prompt(self, state: dict) -> str | None:
@@ -110,35 +108,29 @@ class CoderAgent:
             Stringa prompt da inviare all'LLM, o None se non serve nuovo prompt.
         """
         messages = state.get("messages", [])
+        err = state.get("error_report")
         
-        # Se l'ultimo messaggio è già un HumanMessage nostro, non aggiungere
-        if messages and isinstance(messages[-1], HumanMessage):
-            return None
-        
-        # Caso 1: Errore dal Refiner (outer loop)
-        if state.get("error_report"):
-            err = state["error_report"]
+        # Caso 1: C'è un errore da correggere (SYNTAX, RUNTIME, o LOGICAL)
+        if err is not None:
+            error_intro = {
+                ErrorType.SYNTAX: "Il codice precedente ha un errore di sintassi",
+                ErrorType.RUNTIME: "Il codice precedente ha causato un errore di esecuzione",
+                ErrorType.LOGICAL: "Il codice precedente ha fallito i test",
+            }.get(err.error_type, "Il codice precedente ha un errore")
+            
             return f"""La richiesta originale era: {state['user_request']}
 
-Il codice precedente ha fallito i test con questo errore:
+{error_intro}:
 
-TIPO: {err.error_type}
+TIPO: {err.error_type.value}
 DETTAGLI: {err.details}
 POSIZIONE: {err.location or "N/A"}
 SUGGERIMENTO: {err.suggestion}
 
 Correggi il codice per risolvere questo problema."""
         
-        # Caso 2: Errore di sintassi (inner loop)
-        if state.get("syntax_error"):
-            return f"""Il codice precedente ha un errore di sintassi:
-
-ERRORE: {state['syntax_error']}
-
-Correggi il codice per risolvere questo errore."""
-        
-        # Caso 3: Prima generazione
-        if len(messages) <= 1:  # Solo SystemMessage o vuoto
+        # Caso 2: Prima generazione (no errori)
+        if len(messages) <= 1:
             return f"""Genera un programma Toy-Agent che: {state['user_request']}
 
 Ricorda di:
@@ -146,7 +138,7 @@ Ricorda di:
 2. Includere il task entrypoint obbligatorio
 3. Dichiarare le variabili nel blocco memory:
 4. Terminare ogni statement con ;"""
-        
+        # Caso 3: Dopo tool call
         return None
     
     def reason(self, messages: list, state: dict) -> AIMessage:
@@ -160,19 +152,16 @@ Ricorda di:
         Returns:
             AIMessage: Risposta dell'LLM (può contenere tool_calls)
         """
-        # Rate limiting
         print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
         time.sleep(REQUEST_DELAY_SEC)
         
-        # Costruisci prompt se necessario
+        # Costruisci prompt
         prompt_text = self.build_prompt(state)
         if prompt_text:
             messages.append(HumanMessage(content=prompt_text))
         
-        # Invoca LLM
         response = self.llm_with_tools.invoke(messages)
         
-        # Log tool calls
         if response.tool_calls:
             for tc in response.tool_calls:
                 print(f"[CODER] CALLING TOOL: {tc['name']} with args: {tc['args']}")
@@ -193,7 +182,6 @@ Ricorda di:
         print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
         time.sleep(REQUEST_DELAY_SEC)
         
-        # Prompt per forzare generazione strutturata
         final_prompt = HumanMessage(
             content="Ora genera il codice finale e la spiegazione usando lo schema JSON richiesto."
         )

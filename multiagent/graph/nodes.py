@@ -10,12 +10,12 @@
 from typing import Literal
 
 import requests
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage
 
 from ..agents.coder import create_coder_agent, CODER_SYSTEM_PROMPT
 from ..agents.tester import create_tester_agent
 from ..agents.refiner import create_refiner_agent
-from ..models import TestResult
+from ..models import TestResult, ErrorReport, ErrorType
 from ..config import (
     MAX_SYNTAX_RETRIES, MAX_TEST_RETRIES, 
     TOY_AGENT_API_URL, EXECUTION_TIMEOUT
@@ -26,7 +26,7 @@ from .state import AgentState
 # Import opzionale del modulo di esecuzione locale
 try:
     from .local_executor import local_parse, local_execute
-    LOCAL_EXECUTOR_AVAILABLE = True
+    LOCAL_EXECUTOR_AVAILABLE = False
 except ImportError:
     LOCAL_EXECUTOR_AVAILABLE = False
     local_parse = None
@@ -182,7 +182,7 @@ def _execute_code(script: str, inputs: list) -> tuple[str, str | None]:
 
 def coder_reasoning_node(state: AgentState) -> dict:
     """
-    Nodo di ragionamento del Coder: chiama agent.reason() per tool exploration.
+    Nodo di ragionamento del Coder: chiama coder.reason() per tool exploration.
     
     Adapter tra AgentState e CoderAgent.
     """
@@ -202,7 +202,7 @@ def coder_reasoning_node(state: AgentState) -> dict:
 
 def coder_structuring_node(state: AgentState) -> dict:
     """
-    Nodo di strutturazione del Coder: chiama agent.structure() per output JSON.
+    Nodo di strutturazione del Coder: chiama coder.structure() per output JSON.
     
     Adapter tra AgentState e CoderAgent.
     """
@@ -215,7 +215,6 @@ def coder_structuring_node(state: AgentState) -> dict:
     return {
         "generated_code": result.toy_code,
         "reasoning": result.reasoning,
-        "syntax_error": None,
         "error_report": None,
     }
 
@@ -251,7 +250,7 @@ def syntax_gate_node(state: AgentState) -> dict:
     if success:
         print("[SYNTAX GATE] ✓ Sintassi valida!")
         return {
-            "syntax_error": None,
+            "error_report": None,
             "syntax_retry_count": state["syntax_retry_count"]
         }
     else:
@@ -259,7 +258,12 @@ def syntax_gate_node(state: AgentState) -> dict:
         print(f"[SYNTAX GATE] ✗ Errore: {error_msg}")
         print(f"[SYNTAX GATE] Tentativo {retry_count}/{MAX_SYNTAX_RETRIES}")
         return {
-            "syntax_error": error_msg,
+            "error_report": ErrorReport(
+                error_type=ErrorType.SYNTAX,
+                details=error_msg,
+                location=None,
+                suggestion="Correggi la sintassi del codice."
+            ),
             "syntax_retry_count": retry_count
         }
 

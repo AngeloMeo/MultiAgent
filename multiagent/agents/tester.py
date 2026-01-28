@@ -92,14 +92,12 @@ class TesterAgent:
         """Inizializza l'agente con il modello LLM."""
         config = get_llm_config()
         
-        # LLM con structured output per TestSuite
         self.llm = ChatGoogleGenerativeAI(
             model=config["model"],
             temperature=config["temperature"],
             google_api_key=config["google_api_key"],
         )
         
-        # Structured output per garantire formato JSON valido
         self.llm_structured = self.llm.with_structured_output(TestSuite)
     
     def generate_tests(self, user_request: str, toy_code: str) -> TestSuite:
@@ -143,11 +141,9 @@ Genera 5-10 test cases che coprono le principali funzionalità."""
         ]
         
         try:
-            # Rate limiting
             print(f"[TESTER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
             time.sleep(REQUEST_DELAY_SEC)
             
-            # Genera con structured output
             result = self.llm_structured.invoke(messages)
             return result
         except Exception as e:

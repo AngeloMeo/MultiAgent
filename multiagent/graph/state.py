@@ -30,28 +30,28 @@ class AgentState(TypedDict):
         user_request: Richiesta originale dell'utente
         generated_code: Codice Toy-Agent generato dal Coder
         reasoning: Spiegazione del Coder sulle scelte implementative
-        syntax_error: Ultimo errore di sintassi (se presente)
         test_cases: Lista di test cases generati dal Tester
         test_results: Risultati dell'esecuzione dei test
-        error_report: Report di errore dal Refiner (se presente)
-        syntax_retry_count: Contatore tentativi Inner Loop
-        test_retry_count: Contatore tentativi Outer Loop
+        error_report: Report errore unificato (SYNTAX/RUNTIME/LOGICAL)
+        syntax_retry_count: Contatore tentativi Inner Loop (syntax)
+        test_retry_count: Contatore tentativi Outer Loop (test)
         success: Flag di completamento con successo
         final_output: Messaggio finale per l'utente
     """
     
-    # Coder conversation history (accumulates via add_messages reducer)
-    messages: Annotated[list[AnyMessage], add_messages]
+    
     
     # Input iniziale
     user_request: str
     
+    # Coder conversation history
+    messages: Annotated[list[AnyMessage], add_messages]
+    
     # Output del Coder
     generated_code: str
     reasoning: str
-    
-    # Syntax Gate (Inner Loop)
-    syntax_error: Optional[str]
+
+    # Retry Counters
     syntax_retry_count: int
     
     # Test Generation
@@ -60,7 +60,7 @@ class AgentState(TypedDict):
     # Test Execution
     test_results: list[TestResult]
     
-    # Refiner Output
+    # Error Report (unificato per SYNTAX/RUNTIME/LOGICAL)
     error_report: Optional[ErrorReport]
     test_retry_count: int
     
@@ -84,17 +84,14 @@ def create_initial_state(user_request: str) -> AgentState:
         AgentState: Stato iniziale con tutti i campi inizializzati.
     """
     return AgentState(
-        # Coder conversation history 
-        # (inizialmente vuoto, 
-        # SystemMessage aggiunto da coder_node)
+        # Coder conversation history
         messages=[],
         # Input iniziale
         user_request=user_request,
         # Output del Coder
         generated_code="",
         reasoning="",
-        # Syntax Gate (Inner Loop)
-        syntax_error=None,
+        # Retry counters
         syntax_retry_count=0,
         # Test Generation
         test_cases=[],
