@@ -26,7 +26,7 @@ from .state import AgentState
 # Import opzionale del modulo di esecuzione locale
 try:
     from .local_executor import local_parse, local_execute
-    LOCAL_EXECUTOR_AVAILABLE = False
+    LOCAL_EXECUTOR_AVAILABLE = True
 except ImportError:
     LOCAL_EXECUTOR_AVAILABLE = False
     local_parse = None
@@ -67,23 +67,17 @@ def _verify_output(actual: str, expected: str) -> bool:
     raw_lines = [l.strip() for l in actual.splitlines() if l.strip()]
     magic_values = []
     
-    # Scansiona le righe cercando il token ">>>"
     i = 0
     while i < len(raw_lines):
         line = raw_lines[i]
         # Se la riga è il magic token (o inizia con esso)
         if line.startswith(">>>"):
-            # Caso 1: ">>> 15" (se riuscissimo a farlo)
-            val = line[3:].strip()
-            if val:
-                magic_values.append(val)
-            # Caso 2: ">>>" e valore alla riga dopo (Newline Strategy)
-            elif i + 1 < len(raw_lines):
+            # ">>>" e valore alla riga dopo (Newline Strategy)
+            if i + 1 < len(raw_lines):
                 magic_values.append(raw_lines[i+1])
                 i += 1 # Salta la riga del valore
         i += 1
             
-    # Se abbiamo trovato magic values, usiamo SOLO quelli
     if magic_values:
         actual_lines = magic_values
     else:
@@ -102,7 +96,7 @@ def _verify_output(actual: str, expected: str) -> bool:
         while actual_idx < len(actual_lines):
             if _strict_or_numeric_equal(actual_lines[actual_idx], expected_line):
                 found = True
-                actual_idx += 1  # Avanza per cercare la prossima expected
+                actual_idx += 1
                 break
             actual_idx += 1
         
@@ -222,7 +216,6 @@ def coder_reasoning_node(state: AgentState) -> dict:
     if not messages or not isinstance(messages[0], SystemMessage):
         messages = [SystemMessage(content=CODER_SYSTEM_PROMPT)] + messages
     
-    # Chiama il metodo dell'agente
     response = coder.reason(messages, state)
     messages.append(response)
     
@@ -238,7 +231,6 @@ def coder_structuring_node(state: AgentState) -> dict:
     coder = create_coder_agent()
     messages = list(state.get("messages", []))
     
-    # Chiama il metodo dell'agente
     result = coder.structure(messages)
     
     return {
@@ -258,7 +250,6 @@ def after_reasoning(state: AgentState) -> Literal["tools", "structure"]:
     
     last_message = messages[-1]
     
-    # Controlla se l'ultimo messaggio ha tool calls
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"
     

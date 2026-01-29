@@ -3,7 +3,6 @@
 # ===========================================================================
 # Tools disponibili per il Coder Agent (Knowledge on Demand).
 # Permettono accesso mirato alla documentazione senza prompt lunghi.
-# Per aggiungere nuovi tools: crea funzione e decorala con @tool.
 # ===========================================================================
 
 import os
@@ -13,7 +12,6 @@ from langchain_core.tools import tool
 # ---------------------------------------------------------------------------
 #                           DOCUMENTATION CONTENT
 # ---------------------------------------------------------------------------
-# Documentazione inline per accesso rapido. Alternativa: caricare da file.
 
 SYNTAX_DOCS = {
     "general": """

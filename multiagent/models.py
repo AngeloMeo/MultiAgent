@@ -3,7 +3,6 @@
 # ===========================================================================
 # Schema dati strutturati per comunicazione tra agenti.
 # Pydantic garantisce validazione e serializzazione automatica.
-# Per aggiungere campi: modifica le classi BaseModel qui sotto.
 # ===========================================================================
 
 from typing import Optional
@@ -25,7 +24,6 @@ class ErrorType(str, Enum):
 # ---------------------------------------------------------------------------
 #                           ERROR REPORTING
 # ---------------------------------------------------------------------------
-# Usato dal Refiner Agent per comunicare errori in modo strutturato.
 
 class ErrorReport(BaseModel):
     """
@@ -55,7 +53,6 @@ class ErrorReport(BaseModel):
 # ---------------------------------------------------------------------------
 #                           TEST CASE SPECIFICATION
 # ---------------------------------------------------------------------------
-# Usato dal Tester Agent per definire casi di test in formato JSON.
 
 class TestCase(BaseModel):
     """
@@ -90,7 +87,6 @@ class TestSuite(BaseModel):
 # ---------------------------------------------------------------------------
 #                           CODER OUTPUT
 # ---------------------------------------------------------------------------
-# Output strutturato del Coder Agent.
 
 class CoderOutput(BaseModel):
     """
@@ -111,7 +107,6 @@ class CoderOutput(BaseModel):
 # ---------------------------------------------------------------------------
 #                           TEST EXECUTION RESULT
 # ---------------------------------------------------------------------------
-# Risultato dell'esecuzione di un singolo test.
 
 class TestResult(BaseModel):
     """

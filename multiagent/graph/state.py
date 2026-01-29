@@ -2,8 +2,6 @@
 #                       STATE - Graph State Schema
 # ===========================================================================
 # Definizione dello stato condiviso tra tutti i nodi del grafo.
-# TypedDict garantisce type safety e documentazione del flusso dati.
-# Per aggiungere campi: modificare AgentState e aggiornare i nodi.
 # ===========================================================================
 
 from typing import TypedDict, Optional, Annotated

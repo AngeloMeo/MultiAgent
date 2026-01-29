@@ -3,7 +3,6 @@
 # ===========================================================================
 # Agente per analisi strutturata degli errori.
 # Produce ErrorReport Pydantic per feedback mirato al Coder.
-# Per customizzare: modifica REFINER_SYSTEM_PROMPT o ErrorReport.
 # ===========================================================================
 
 import time
@@ -116,7 +115,6 @@ Identifica la causa dell'errore e suggerisci una correzione specifica."""
         ]
         
         try:
-            # Rate limiting
             print(f"[REFINER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
             time.sleep(REQUEST_DELAY_SEC)
             

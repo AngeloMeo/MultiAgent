@@ -97,15 +97,12 @@ def build_coder_subgraph():
     """
     builder = StateGraph(AgentState)
     
-    # --- NODI ---
     builder.add_node("reasoning", coder_reasoning_node)
     builder.add_node("tools", ToolNode(CODER_TOOLS))
     builder.add_node("structure", coder_structuring_node)
     
-    # --- EDGES ---
     builder.set_entry_point("reasoning")
     
-    # Dopo reasoning: routing condizionale
     builder.add_conditional_edges(
         "reasoning",
         after_reasoning,
@@ -115,10 +112,8 @@ def build_coder_subgraph():
         }
     )
     
-    # Dopo tools: torna a reasoning (loop)
     builder.add_edge("tools", "reasoning")
     
-    # Dopo structure: fine sottografo
     builder.add_edge("structure", END)
     
     return builder.compile()

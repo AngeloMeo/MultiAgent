@@ -167,7 +167,6 @@ Ricorda di:
         print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
         time.sleep(REQUEST_DELAY_SEC)
         
-        # Costruisci prompt
         prompt_text = self.build_prompt(state)
         if prompt_text:
             messages.append(HumanMessage(content=prompt_text))
