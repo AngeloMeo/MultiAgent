@@ -40,9 +40,10 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configurazione
-Crea un file `.env` nella root del progetto:
+Creare un file `.env` nella root del progetto:
 ```ini
 GOOGLE_API_KEY=tua_chiave_api_qui
+TOY_AGENT_API_URL=api_link_qui
 ```
 
 ### 4. Esecuzione
