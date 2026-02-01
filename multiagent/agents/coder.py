@@ -69,6 +69,16 @@ show ">>>";
 show res;        % QUESTO è quello che il test legge!
 ```
 
+=== STRUMENTI DISPONIBILI (IMPORTANTISSIMO) ===
+HAI SOLO QUESTI DUE TOOL:
+1. `get_syntax_help(topic)`: Per leggere la documentazione
+2. `get_full_grammar()`: Per la grammatica formale
+
+NON ESISTE NESSUN TOOL PER ESEGUIRE IL CODICE!
+- NON provare a chiamare `run_code`, `execute`, `test_code` o simili.
+- NON provare a verificare se il codice funziona eseguendolo.
+- L'esecuzione viene fatta esternamente DOPO che hai generato il codice strutturato.
+
 === ALTRE REGOLE ===
 - NO carattere armeno "ի"
 - NO escape nelle stringhe (\\', \\", \\\\)

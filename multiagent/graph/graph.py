@@ -52,6 +52,26 @@ def after_syntax_gate(state: AgentState) -> str:
     else:
         return "tester"
 
+def after_coder_graph(state: AgentState) -> str:
+    """
+    Decisione dopo il Coder Subgraph.
+    
+    Returns:
+        "tester" se sintassi OK (no error_report)
+        "coder" se errore SYNTAX e tentativi disponibili
+        "failure" se superato limite tentativi
+    """
+    err = state.get("error_report")
+    
+    if err is None:
+        return "tester"
+    elif err.error_type == ErrorType.SYNTAX:
+        if state["syntax_retry_count"] >= MAX_SYNTAX_RETRIES:
+            return "failure"
+        return "coder"
+    else:
+        return "tester"
+
 
 def after_executor(state: AgentState) -> str:
     """
@@ -100,7 +120,9 @@ def build_coder_subgraph():
     builder.add_node("reasoning", coder_reasoning_node)
     builder.add_node("tools", ToolNode(CODER_TOOLS))
     builder.add_node("structure", coder_structuring_node)
+    builder.add_node("syntax_gate", syntax_gate_node)
     
+
     builder.set_entry_point("reasoning")
     
     builder.add_conditional_edges(
@@ -114,7 +136,17 @@ def build_coder_subgraph():
     
     builder.add_edge("tools", "reasoning")
     
-    builder.add_edge("structure", END)
+    builder.add_edge("structure", "syntax_gate")
+
+    builder.add_conditional_edges(
+        "syntax_gate",
+        after_syntax_gate,
+        {
+            "tester": END,
+            "coder": "reasoning",
+            "failure": END
+        }
+    )
     
     return builder.compile()
 
@@ -145,7 +177,7 @@ def build_graph() -> StateGraph:
 
     coder_subgraph = build_coder_subgraph()
     graph_builder.add_node("coder", coder_subgraph)
-    graph_builder.add_node("syntax_gate", syntax_gate_node)
+    
     graph_builder.add_node("tester", tester_node)
     graph_builder.add_node("executor", executor_node)
     graph_builder.add_node("refiner", refiner_node)
@@ -153,8 +185,6 @@ def build_graph() -> StateGraph:
     graph_builder.add_node("failure", failure_node)
     
     graph_builder.set_entry_point("coder")
-    
-    graph_builder.add_edge("coder", "syntax_gate")
     
     graph_builder.add_edge("tester", "executor")
     
@@ -165,8 +195,8 @@ def build_graph() -> StateGraph:
     
     # Dopo Syntax Gate: OK -> Tester, Error -> Coder o Failure
     graph_builder.add_conditional_edges(
-        "syntax_gate",
-        after_syntax_gate,
+        "coder",
+        after_coder_graph,
         {
             "tester": "tester",
             "coder": "coder",

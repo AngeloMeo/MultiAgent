@@ -271,7 +271,7 @@ def syntax_gate_node(state: AgentState) -> dict:
         print("[SYNTAX GATE] ✓ Sintassi valida!")
         return {
             "error_report": None,
-            "syntax_retry_count": state["syntax_retry_count"]
+            "syntax_retry_count": 0
         }
     else:
         retry_count = state["syntax_retry_count"] + 1
