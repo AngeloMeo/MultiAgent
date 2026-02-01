@@ -41,7 +41,7 @@ REGOLA FONDAMENTALE:
 
 ESEMPIO:
 - Programma calcola 10+5
-- Output reale: "Menu...\n>>> 15"
+- Output reale: "Menu...\n>>>\n15"
 - Tuo expected_output: "15" (CORRETTO)
 - Tuo expected_output: ">>> 15" (ERRATO)
 - Tuo expected_output: "Risultato: 15" (ERRATO)
