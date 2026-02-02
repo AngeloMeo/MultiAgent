@@ -174,8 +174,9 @@ Ricorda di:
         Returns:
             AIMessage: Risposta dell'LLM (può contenere tool_calls)
         """
-        print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
-        time.sleep(REQUEST_DELAY_SEC)
+        if REQUEST_DELAY_SEC != 0:
+            print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
+            time.sleep(REQUEST_DELAY_SEC)
         
         prompt_text = self.build_prompt(state)
         if prompt_text:
@@ -200,8 +201,9 @@ Ricorda di:
             CoderOutput: Output strutturato con toy_code e reasoning
         """
         print("[CODER] Generazione output strutturato finale...")
-        print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
-        time.sleep(REQUEST_DELAY_SEC)
+        if REQUEST_DELAY_SEC != 0:
+            print(f"[CODER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
+            time.sleep(REQUEST_DELAY_SEC)
         
         final_prompt = HumanMessage(
             content="Ora genera il codice finale e la spiegazione usando lo schema JSON richiesto."

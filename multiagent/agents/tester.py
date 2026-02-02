@@ -143,8 +143,9 @@ Genera 5-10 test cases che coprono le principali funzionalità."""
         ]
         
         try:
-            print(f"[TESTER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
-            time.sleep(REQUEST_DELAY_SEC)
+            if REQUEST_DELAY_SEC != 0:
+                print(f"[TESTER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
+                time.sleep(REQUEST_DELAY_SEC)
             
             result = self.llm_structured.invoke(messages)
             return result

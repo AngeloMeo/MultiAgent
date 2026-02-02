@@ -115,8 +115,9 @@ Identifica la causa dell'errore e suggerisci una correzione specifica."""
         ]
         
         try:
-            print(f"[REFINER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
-            time.sleep(REQUEST_DELAY_SEC)
+            if REQUEST_DELAY_SEC != 0:
+                print(f"[REFINER] Attendo {REQUEST_DELAY_SEC}s per rate limit...")
+                time.sleep(REQUEST_DELAY_SEC)
             
             result = self.llm_structured.invoke(messages)
             return result

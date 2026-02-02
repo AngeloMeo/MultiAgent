@@ -17,7 +17,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
+TOY_AGENT_API_URL = os.getenv("TOY_AGENT_API_URL") # E.g. "https://toy-agent-func.azurewebsites.net/api"
 
 # ---------------------------------------------------------------------------
 #                           MODEL CONFIGURATION
@@ -41,8 +41,6 @@ REQUEST_DELAY_SEC = 0     # Nessun delay (fatturazione attiva)
 MAX_SYNTAX_RETRIES = 3
 MAX_TEST_RETRIES = 5
 EXECUTION_TIMEOUT = 5  # Timeout per richieste HTTP e esecuzione test (secondi)
-
-TOY_AGENT_API_URL = os.getenv("TOY_AGENT_API_URL") # E.g. "https://toy-agent-func.azurewebsites.net/api"
 
 
 # ---------------------------------------------------------------------------
