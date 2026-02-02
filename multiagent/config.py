@@ -60,7 +60,7 @@ def get_llm_config() -> dict:
     if not GOOGLE_API_KEY:
         raise ValueError(
             "GOOGLE_API_KEY non trovata! "
-            "Crea un file .env con la tua API key. Vedi .env.example"
+            "Crea un file .env con la tua API key."
         )
     
     return {
