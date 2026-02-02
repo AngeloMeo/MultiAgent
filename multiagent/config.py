@@ -40,7 +40,7 @@ REQUEST_DELAY_SEC = 0     # Nessun delay (fatturazione attiva)
 
 MAX_SYNTAX_RETRIES = 3
 MAX_TEST_RETRIES = 5
-EXECUTION_TIMEOUT = 5  # Timeout per richieste HTTP e esecuzione test (secondi)
+EXECUTION_TIMEOUT = 5  # Timeout per esecuzione test (secondi)
 
 
 # ---------------------------------------------------------------------------
