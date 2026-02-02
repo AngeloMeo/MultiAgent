@@ -23,14 +23,7 @@ from ..config import (
 
 from .state import AgentState
 
-# Import opzionale del modulo di esecuzione locale
-try:
-    from .local_executor import local_parse, local_execute
-    LOCAL_EXECUTOR_AVAILABLE = True
-except ImportError:
-    LOCAL_EXECUTOR_AVAILABLE = False
-    local_parse = None
-    local_execute = None
+
 
 
 # ---------------------------------------------------------------------------
@@ -116,40 +109,38 @@ def _parse_code(script: str) -> tuple[bool, str | None]:
         Tuple (success, error_msg): success=True se sintassi valida, 
         altrimenti error_msg contiene l'errore.
     """
-    # Prova remoto
-    if TOY_AGENT_API_URL:
-        try:
-            print(f"[PARSE] 🚀 Parsing remoto")
-            response = requests.post(
-                f"{TOY_AGENT_API_URL}/parse",
-                json={"script": script},
-                timeout=EXECUTION_TIMEOUT
-            )
+    
+    if not TOY_AGENT_API_URL:
+        return False, "API URL not configured (TOY_AGENT_API_URL missing)"
+
+    try:
+        print(f"[PARSE] 🚀 Parsing remoto")
+        response = requests.post(
+            f"{TOY_AGENT_API_URL}/parse",
+            json={"script": script},
+            timeout=EXECUTION_TIMEOUT
+        )
+        
+        # Server error (5xx)
+        if response.status_code >= 500:
+            return False, f"Server error ({response.status_code})"
             
-            # Server error (5xx) -> fallback
-            if response.status_code >= 500:
-                print(f"[PARSE] ⚠ Server error ({response.status_code}), fallback a locale...")
-            # HTML response (Azure sleeping) -> fallback
-            elif "<html" in response.text.lower():
-                print("[PARSE] ⚠ API risponde con HTML, fallback a locale...")
-            elif response.status_code == 200:
-                return True, None
-            else:
-                # Errore di sintassi (4xx)
-                try:
-                    error_msg = response.json().get("error", "Unknown syntax error")
-                except ValueError:
-                    error_msg = response.text[:200]
-                return False, error_msg
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[PARSE] ⚠ Connessione fallita ({e}), fallback a locale...")
-    
-    # Fallback locale
-    if not LOCAL_EXECUTOR_AVAILABLE:
-        return False, "API non disponibile e modulo locale non presente"
-    
-    return local_parse(script)
+        # HTML response (Azure sleeping or error page)
+        elif "<html" in response.text.lower():
+            return False, "API returned HTML (possibly Azure starting up or error page)"
+            
+        elif response.status_code == 200:
+            return True, None
+        else:
+            # Errore di sintassi (4xx)
+            try:
+                error_msg = response.json().get("error", "Unknown syntax error")
+            except ValueError:
+                error_msg = response.text[:200]
+            return False, error_msg
+            
+    except requests.exceptions.RequestException as e:
+        return False, f"Connection failed: {e}"
 
 
 def _execute_code(script: str, inputs: list) -> tuple[str, str | None]:
@@ -160,43 +151,39 @@ def _execute_code(script: str, inputs: list) -> tuple[str, str | None]:
         Tuple (output, error): output è l'output del programma,
         error è None se esecuzione OK, altrimenti contiene l'errore.
     """
-    # Prova remoto
-    if TOY_AGENT_API_URL:
+    
+    if not TOY_AGENT_API_URL:
+        return "", "API URL not configured (TOY_AGENT_API_URL missing)"
+
+    try:
+        print(f"[EXECUTE] 🚀 Esecuzione remota")
+        response = requests.post(
+            f"{TOY_AGENT_API_URL}/run",
+            json={"script": script, "inputs": inputs},
+            timeout=EXECUTION_TIMEOUT
+        )
+        
+        if response.status_code >= 500:
+            return "", f"Server error ({response.status_code})"
+        
         try:
-            print(f"[EXECUTE] 🚀 Esecuzione remota")
-            response = requests.post(
-                f"{TOY_AGENT_API_URL}/run",
-                json={"script": script, "inputs": inputs},
-                timeout=EXECUTION_TIMEOUT
-            )
-            
-            if response.status_code >= 500:
-                print(f"[EXECUTE] ⚠ Server error ({response.status_code}), fallback a locale...")
+            resp_data = response.json()
+        except ValueError:
+            if "<html" in response.text.lower():
+                 return "", "API returned HTML (possibly Azure starting up or error page)"
             else:
-                try:
-                    resp_data = response.json()
-                except ValueError:
-                    if "<html" in response.text.lower():
-                        print("[EXECUTE] ⚠ API risponde con HTML, fallback a locale...")
-                    else:
-                        return "", f"Invalid response: {response.text[:200]}"
-                else:
-                    output_list = resp_data.get("output", [])
-                    output = "\n".join(output_list) if isinstance(output_list, list) else str(output_list)
+                return "", f"Invalid response: {response.text[:200]}"
+        else:
+            output_list = resp_data.get("output", [])
+            output = "\n".join(output_list) if isinstance(output_list, list) else str(output_list)
+            
+            if response.status_code == 200:
+                return output, None
+            else:
+                return output, resp_data.get("error", "Unknown execution error")
                     
-                    if response.status_code == 200:
-                        return output, None
-                    else:
-                        return output, resp_data.get("error", "Unknown execution error")
-                        
-        except requests.exceptions.RequestException as e:
-            print(f"[EXECUTE] ⚠ Connessione fallita ({e}), fallback a locale...")
-    
-    # Fallback locale
-    if not LOCAL_EXECUTOR_AVAILABLE:
-        return "", "API non disponibile e modulo locale non presente"
-    
-    return local_execute(script, inputs)
+    except requests.exceptions.RequestException as e:
+        return "", f"Connection failed: {e}"
 
 
 # ---------------------------------------------------------------------------
