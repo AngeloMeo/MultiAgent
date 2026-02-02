@@ -12,7 +12,7 @@ Il progetto integra tecniche avanzate di **Agentic AI** e **Language Engineering
 
 *   **LangGraph**: Orchestrazione del flusso di controllo ciclico degli agenti (State Machine).
 *   **Lark**: Parsing e validazione sintattica del linguaggio Toy-Agent (CFG Grammar).
-*   **LLM (Gemini 2.0 Flash Lite)**: Motore di ragionamento per generazione codice (Coder), testing (Tester) e debugging (Refiner).
+*   **LLM (Gemini 2.5 Flash Lite)**: Motore di ragionamento per generazione codice (Coder), testing (Tester) e debugging (Refiner).
 *   **Pydantic**: Validazione strutturata dei dati scambiati tra gli agenti (Output Parsing).
 *   **Python 3.10+**: Runtime environment.
 
@@ -69,4 +69,4 @@ Il sistema implementa un ciclo **ReAct** ibrido con correzione automatica:
 5.  **Refiner Agent**: Se i test falliscono, analizza l'errore runtime/logico e guida il Coder nella correzione (Outer Loop).
 
 ---
-*Progetto sviluppato da [Angelo Meo] *
+*Progetto sviluppato da Angelo Meo*
