@@ -51,53 +51,45 @@ def _verify_output(actual: str, expected: str) -> bool:
     2. Stampare il risultato sulla riga successiva
     
     Il verificatore cerca ">>>" e prende la riga DOPO come valore da testare.
-    
-    Esempio:
-        actual: "Menu...\n>>>\n15\nMenu..."
-        expected: "15"
-        -> True
     """
-    raw_lines = [l.strip() for l in actual.splitlines() if l.strip()]
+    # 1. Pulizia e Normalizzazione: Rimuove spazi e righe vuote
+    actual_lines_raw = [l.strip() for l in actual.splitlines() if l.strip()]
+    expected_lines = [l.strip() for l in expected.strip().splitlines() if l.strip()]
+
+    # 2. Estrazione "Magic Values" (>>>)
+    #    Se troviamo ">>>", consideriamo valida solo la riga successiva.
     magic_values = []
-    
     i = 0
-    while i < len(raw_lines):
-        line = raw_lines[i]
-        # Se la riga è il magic token (o inizia con esso)
+    while i < len(actual_lines_raw):
+        line = actual_lines_raw[i]
+        
+        # Se la riga è il magic token
         if line.startswith(">>>"):
-            # ">>>" e valore alla riga dopo (Newline Strategy)
-            if i + 1 < len(raw_lines):
-                magic_values.append(raw_lines[i+1])
-                i += 1 # Salta la riga del valore
+            # Prendi il valore alla riga successiva (se esiste)
+            if i + 1 < len(actual_lines_raw):
+                magic_values.append(actual_lines_raw[i+1])
+                i += 1 # Salta la riga del valore appena consumata
         i += 1
             
-    if magic_values:
-        actual_lines = magic_values
-    else:
-        # Fallback: usa tutto l'output
-        actual_lines = raw_lines
+    # Usa solo i valori magici se presenti, altrimenti usa tutto l'output (fallback)
+    lines_to_verify = magic_values if magic_values else actual_lines_raw
         
-    expected_lines = [l.strip() for l in expected.strip().splitlines() if l.strip()]
-    
+    # Caso base: se non ci aspettiamo nulla, controlliamo se l'output è vuoto
     if not expected_lines:
-        return not actual_lines
+        return not lines_to_verify
     
-    # Cerca ogni expected line come sottosequenza (non contigua) nell'actual
-    actual_idx = 0
+    # 3. Verifica Semplificata (Unordered)
+    #    Controlliamo semplicemente se tutte le righe attese sono presenti nell'output.
     for expected_line in expected_lines:
         found = False
-        while actual_idx < len(actual_lines):
-            if _strict_or_numeric_equal(actual_lines[actual_idx], expected_line):
+        for line in lines_to_verify:
+            if _strict_or_numeric_equal(line, expected_line):
                 found = True
-                actual_idx += 1
                 break
-            actual_idx += 1
         
         if not found:
-            # Fallback: cerca ovunque (non in ordine) per valori critici
-            if not any(_strict_or_numeric_equal(al, expected_line) for al in actual_lines):
-                return False
-    
+            return False
+            
     return True
 
 
