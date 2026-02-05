@@ -14,12 +14,12 @@ Il progetto integra tecniche avanzate di **Agentic AI** e **Language Engineering
 *   **Lark**: Parsing e validazione sintattica del linguaggio Toy-Agent (CFG Grammar).
 *   **LLM (Gemini 2.5 Flash Lite)**: Motore di ragionamento per generazione codice (Coder), testing (Tester) e debugging (Refiner).
 *   **Pydantic**: Validazione strutturata dei dati scambiati tra gli agenti (Output Parsing).
-*   **Python 3.10+**: Runtime environment.
+*   **Python 3.14**: Runtime environment.
 
 ## 🛠️ Quickstart
 
 ### 1. Prerequisiti
-*   Python 3.10 o superiore installato.
+*   Python 3.14 installato.
 *   Una API Key di Google Generative AI (Gemini).
 
 ### 2. Installazione
