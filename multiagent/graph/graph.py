@@ -52,27 +52,6 @@ def after_syntax_gate(state: AgentState) -> str:
     else:
         return "tester"
 
-def after_coder_graph(state: AgentState) -> str:
-    """
-    Decisione dopo il Coder Subgraph.
-    
-    Returns:
-        "tester" se sintassi OK (no error_report)
-        "coder" se errore SYNTAX e tentativi disponibili
-        "failure" se superato limite tentativi
-    """
-    err = state.get("error_report")
-    
-    if err is None:
-        return "tester"
-    elif err.error_type == ErrorType.SYNTAX:
-        if state["syntax_retry_count"] >= MAX_SYNTAX_RETRIES:
-            return "failure"
-        return "coder"
-    else:
-        return "tester"
-
-
 def after_executor(state: AgentState) -> str:
     """
     Decisione dopo l'Executor.
@@ -196,7 +175,7 @@ def build_graph() -> StateGraph:
     # Dopo Syntax Gate: OK -> Tester, Error -> Coder o Failure
     graph_builder.add_conditional_edges(
         "coder",
-        after_coder_graph,
+        after_syntax_gate,
         {
             "tester": "tester",
             "coder": "coder",
