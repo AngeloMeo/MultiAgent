@@ -156,7 +156,15 @@ def _execute_code(script: str, inputs: list) -> tuple[str, str | None]:
         )
         
         if response.status_code >= 500:
-            return "", f"Server error ({response.status_code})"
+            # Prova a estrarre il messaggio di errore dal JSON
+            try:
+                err_data = response.json()
+                error_msg = err_data.get("error", f"Server error ({response.status_code})")
+                output_list = err_data.get("output", [])
+                output = "\n".join(output_list) if isinstance(output_list, list) else ""
+                return output, error_msg
+            except ValueError:
+                return "", f"Server error ({response.status_code})"
         
         try:
             resp_data = response.json()
