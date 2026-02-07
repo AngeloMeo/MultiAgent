@@ -407,7 +407,7 @@ def failure_node(state: AgentState) -> dict:
     failed_tests = [r for r in state.get("test_results", []) if not r.passed]
     
     if error_report:
-        error_details = getattr(error_report, 'details', None) or error_report.get('details', 'N/A')
+        error_details = error_report.details or 'N/A'
     elif failed_tests:
         ft = failed_tests[0]
         error_details = f"Test Failed: {ft.test_description}\nExpected: {ft.expected_output}\nActual: {ft.actual_output or 'N/A'}"
