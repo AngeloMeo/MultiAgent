@@ -412,7 +412,7 @@ def failure_node(state: AgentState) -> dict:
         ft = failed_tests[0]
         error_details = f"Test Failed: {ft.test_description}\nExpected: {ft.expected_output}\nActual: {ft.actual_output or 'N/A'}"
     else:
-        error_details = state.get('syntax_error') or 'N/A'
+        error_details = 'N/A'
     
     return {
         "success": False,
