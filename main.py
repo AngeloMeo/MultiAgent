@@ -66,7 +66,7 @@ Esempi:
             "Calcolo MCD: chiedi due numeri e calcola MCD (algoritmo Euclide)",
             "Verifica Numero Primo: chiedi N, usa task 'is_prime' -> flag, stampa risultato",
             "Simulatore Sconto: chiedi prezzo e quantità. Se qty > 10 sconto 10%, > 50 sconto 20%. Stampa totale.",
-            "Morra Cinese: chiedi scelta utente (0,1,2), simula PC (fissa o calcolata), stampa vincitore"
+            "Morra Cinese: chiedi scelta utente (0,1,2), simula PC (fissa o calcolata), stampa vincitore."
         ]
         
         print("\nScegli un task demo da eseguire:")
