@@ -449,7 +449,7 @@ def get_full_grammar() -> str:
     """
     Ottieni la grammatica EBNF completa del linguaggio Toy-Agent.
     
-    Usa questo tool solo se hai bisogno di dettagli precisi sulla grammatica formale.
+    Usa questo tool se hai bisogno di dettagli precisi sulla grammatica formale.
     Per uso normale, preferisci get_syntax_help con topic specifici.
     
     Returns:
