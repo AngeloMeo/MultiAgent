@@ -142,6 +142,15 @@ ERRORI COMUNI:
 % ERRATO:
 check x is 1 then ... close;
 alt_check x is 2 then ... close;  % Sintassi invalida!
+
+% CORRETTO:
+check x is 1 then
+    ...;
+alt_check x is 2 then
+    ...;
+alt
+    ...;
+close; % UN SOLO close alla fine della catena!
 ```
 
 LOOP (loop):
