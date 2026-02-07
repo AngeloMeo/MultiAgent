@@ -52,6 +52,28 @@ def after_syntax_gate(state: AgentState) -> str:
     else:
         return "tester"
 
+def after_coder_subgraph(state: AgentState) -> str:
+    """
+    Decisione dopo che il sottografo Coder ha terminato.
+    
+    Il sottografo gestisce internamente i retry di sintassi.
+    Quando esce, lo stato può essere:
+    - Sintassi valida (error_report è None) -> vai a tester
+    - Troppi retry syntax (error_report con SYNTAX) -> vai a failure
+    """
+    err = state.get("error_report")
+    
+    if err is None:
+        return "tester"
+    
+    # Se c'è ancora errore syntax dopo i retry interni, è un fallimento
+    if err.error_type == ErrorType.SYNTAX:
+        return "failure"
+    
+    # Altri tipi di errore non dovrebbero arrivare qui, ma se succede passa al tester
+    return "tester"
+
+
 def after_executor(state: AgentState) -> str:
     """
     Decisione dopo l'Executor.
@@ -61,14 +83,12 @@ def after_executor(state: AgentState) -> str:
         "refiner" se ci sono fallimenti e tentativi disponibili
         "failure" se superato limite tentativi
     """
-    # Guard: se non ci sono test, considera come fallimento
     if not state["test_results"]:
         print("[EXECUTOR] WARNING: Nessun test case eseguito!")
         if state["test_retry_count"] >= MAX_TEST_RETRIES:
             return "failure"
         return "refiner"
     
-    # Controlla se tutti i test sono passati (tr è un oggetto TestResult Pydantic)
     all_passed = all(tr.passed for tr in state["test_results"])
     
     if all_passed:
@@ -172,13 +192,12 @@ def build_graph() -> StateGraph:
     graph_builder.add_edge("success", END)
     graph_builder.add_edge("failure", END)
     
-    # Dopo Syntax Gate: OK -> Tester, Error -> Coder o Failure
+    # Dopo Coder Subgraph: sintassi OK -> Tester, troppi retry -> Failure
     graph_builder.add_conditional_edges(
         "coder",
-        after_syntax_gate,
+        after_coder_subgraph,
         {
             "tester": "tester",
-            "coder": "coder",
             "failure": "failure"
         }
     )
