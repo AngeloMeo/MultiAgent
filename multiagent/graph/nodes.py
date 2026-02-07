@@ -35,7 +35,7 @@ def _strict_or_numeric_equal(s1: str, s2: str) -> bool:
     if s1 == s2:
         return True
     try:
-        return abs(float(s1) - float(s2)) < 1e-9
+        return abs(float(s1) - float(s2)) < 1e-5
     except ValueError:
         return False
 
