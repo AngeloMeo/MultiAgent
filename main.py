@@ -84,7 +84,7 @@ Esempi:
                 idx = int(choice) - 1
                 selected_task = DEMO_TASKS[idx]
                 print(f"\nEsecuzione task: '{selected_task}'")
-                result = run_graph(selected_task)
+                run_graph(selected_task)
             else:
                 print("Scelta non valida.")
                 sys.exit(1)
