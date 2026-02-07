@@ -435,6 +435,126 @@ def get_syntax_help(topic: str) -> str:
     return f"Topic '{topic}' non trovato. Argomenti disponibili: {available}"
 
 
+TOY_GRAMMAR = r"""
+// --- STRUTTURA PRINCIPALE ---
+start: program
+
+program: memory_block code_block
+
+// --- SEZIONE MEMORIA ---
+memory_block: "memory:" decls "end_memory"
+
+decls: declaration ";" decls 
+     | // empty
+
+declaration: "keep" CNAME "as" type_name
+
+type_name: "whole"  -> type_whole
+         | "fract"  -> type_fract
+         | "quote"  -> type_quote
+         | "flag"   -> type_flag
+
+// --- SEZIONE LOGICA ---
+code_block: task_list
+
+task_list: task task_list 
+         | // empty
+
+task: "task" CNAME "[" params "]" "->" type_name ":" body "done"
+
+params: param_list 
+      | // empty
+
+param_list: CNAME "as" type_name "," param_list 
+          | CNAME "as" type_name
+
+// --- CORPO E ISTRUZIONI ---
+body: stat ";" body 
+    | // empty
+
+stat: assignment
+    | task_call_stat
+    | yield_stat
+    | io_stat
+    | check_stat
+    | loop_stat
+
+assignment: CNAME "<<" expr
+
+task_call_stat: CNAME "run" "[" exprs "]"
+
+yield_stat: "yield" expr
+
+io_stat: "show" expr  -> show_stat
+       | "grab" CNAME -> grab_stat
+
+// --- CONTROLLO FLUSSO ---
+check_stat: "check" expr "then" body elif_block else_block "close"
+
+elif_block: "alt_check" expr "then" body elif_block 
+          | // empty
+
+else_block: "alt" body 
+          | // empty
+
+loop_stat: "loop" expr "do" body "close"
+
+// --- ESPRESSIONI (Con precedenza operatori) ---
+exprs: expr "," exprs 
+     | expr 
+     | // empty
+
+?expr: logic_expr
+
+?logic_expr: logic_expr "or" comp_expr   -> or_op
+           | logic_expr "and" comp_expr  -> and_op
+           | "not" logic_expr            -> not_op
+           | comp_expr
+
+?comp_expr: arith_expr "is" arith_expr      -> eq_op
+          | arith_expr "is_not" arith_expr  -> neq_op
+          | arith_expr "over" arith_expr    -> gt_op
+          | arith_expr "under" arith_expr   -> lt_op
+          | arith_expr
+
+?arith_expr: arith_expr "plus" term   -> add_op
+           | arith_expr "minus" term  -> sub_op
+           | term
+
+?term: term "times" factor -> mul_op
+     | term "div" factor   -> div_op
+     | factor
+
+?factor: atom
+       | "(" expr ")"
+       | task_call_expr
+
+task_call_expr: CNAME "run" "[" exprs "]"
+
+atom: CNAME           -> var_usage
+    | SIGNED_INT      -> const_whole
+    | SIGNED_FLOAT    -> const_fract
+    | ESCAPED_STRING  -> const_quote
+    | "yes"           -> const_true
+    | "no"            -> const_false
+
+// --- DEFINIZIONI LESSICALI ---
+%import common.CNAME
+%import common.INT
+%import common.FLOAT
+%import common.ESCAPED_STRING
+%import common.WS
+%ignore WS
+
+// Numeri con segno (supporto per negativi)
+SIGNED_INT: ["-"] INT
+SIGNED_FLOAT: ["-"] FLOAT
+
+// Commenti stile Toy2 (%)
+COMMENT: "%" /[^\n]*/
+%ignore COMMENT
+"""
+
 @tool
 def get_full_grammar() -> str:
     """
@@ -446,15 +566,7 @@ def get_full_grammar() -> str:
     Returns:
         Grammatica Lark/EBNF del linguaggio.
     """
-    # Trova il file grammar.lark relativo a questo modulo
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    grammar_path = os.path.join(current_dir, "..", "toy-agent", "grammar.lark")
-    
-    try:
-        with open(grammar_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        return "Errore: file grammar.lark non trovato"
+    return TOY_GRAMMAR
 
 
 # ---------------------------------------------------------------------------
