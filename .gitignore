@@ -1,10 +1,9 @@
-/.venv
+.venv
 .env
-ILP_Proj.md
 ILP_Proj.pdf
-SPIEGAZIONE_PROGETTO.md
-WORKFLOW_DETTAGLIATO.md
+*.md
 __pycache__
-toy-agent
 local_executor.py
 .vscode
+toy-agent.pdf
+*.toy
